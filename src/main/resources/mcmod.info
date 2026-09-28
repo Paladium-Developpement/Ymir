@@ -2,7 +2,7 @@
   {
     "modid": "ymir",
     "name": "Ymir",
-    "description": "Minecraft Forge World Managment",
+    "description": "Minecraft Forge World Management",
     "version": "${version}",
     "mcversion": "${mcversion}",
     "url": "https://paladium-pvp.fr",
