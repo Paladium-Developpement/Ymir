@@ -1,0 +1,362 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name = "Paladium-Public"
+            url = "http://repository.palagitium.dev/artifactory/Paladium-Public"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath 'fr.paladium.gradle:PalaForgeGradle:1.2.4-1.7.10'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.4'
+    }
+}
+
+plugins {
+    id 'io.franzbecker.gradle-lombok' version '1.6'
+}
+
+allprojects{
+    repositories {
+        mavenCentral()
+        maven {
+            name = "Paladium-Dev"
+            url = "http://repository.palagitium.dev/artifactory/Paladium-Dev"
+            credentials {
+                username = getRepositoryUser()
+                password = getRepositoryPassword()
+            }
+        }
+        maven {
+            name = "Paladium-Repo"
+            url = "http://repository.palagitium.dev/artifactory/Paladium-Repo"
+            credentials {
+                username = getRepositoryUser()
+                password = getRepositoryPassword()
+            }
+        }
+        maven {
+            name = "Paladium-Public"
+            url = "http://repository.palagitium.dev/artifactory/Paladium-Public"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'forge'
+apply plugin: 'maven-publish'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+dependencies {
+    compile fileTree(dir: 'libs', include: '*.jar')
+    compile "org.projectlombok:lombok:1.18.22"
+    
+    compile "fr.paladium:palamixins:+:dev"
+    compile "org.spongepowered:mixin:0.7.11-SNAPSHOT"
+
+    compile "fr.paladium:palaforge-utils:+:dev"
+    compile "fr.paladium:paladium-ui:+:dev"
+    compile "fr.paladium:zephyr-ui:+:mod"
+    compile "fr.paladium:worldguardbridge:+:dev"
+
+    compile 'org.mongodb:mongodb-driver-sync:4.5.0'
+    compile 'com.rabbitmq:amqp-client:5.21.0'
+    compile 'com.squareup.retrofit2:retrofit:2.9.0'
+    compile 'com.squareup.retrofit2:converter-gson:2.9.0'
+    compile 'com.squareup.retrofit2:converter-scalars:2.9.0'
+}
+
+/* Utils */
+version = "1.0.0"
+group = "fr.paladium.ymir"
+archivesBaseName = "ymir"
+
+task updateVersion() {
+    project.version = "1.0.0"
+}
+
+build.dependsOn updateVersion
+
+minecraft {
+    version = "1.7.10-10.13.4.1614-1.7.10"
+    runDir = "runtime"
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+compileJava {
+    options.encoding = 'UTF-8'
+}
+
+configurations {
+    shadow
+    compile.extendsFrom shadow
+}
+
+jar {
+    configurations.shadow.each { dep ->
+        from(project.zipTree(dep)){
+            exclude 'META-INF', 'META-INF/**'
+        }
+    }
+
+    archiveName "ymir.jar"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+
+        expand 'version':project.version, 'mcversion':project.minecraft.version
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+sourceSets {
+    main {
+        output.resourcesDir = output.classesDir
+    }
+}
+
+shadowJar {
+    configurations = [project.configurations.shadow] // ***
+    classifier = null
+}
+
+reobf {
+    reobf(shadowJar.archivePath) {
+        spec -> spec.classpath = configurations.compile
+    }
+}
+
+reobf.dependsOn shadowJar
+
+/* Custom Func */
+def getRepositoryUser() {
+    if (System.getenv('MAVEN_REPO_USER') != null) {
+        return System.getenv('MAVEN_REPO_USER')
+    } else {
+        return project.findProperty('MAVEN_REPO_USER')
+    }
+
+    return ""
+}
+
+def getRepositoryPassword() {
+    if (System.getenv('MAVEN_REPO_PASS') != null) {
+        return System.getenv('MAVEN_REPO_PASS')
+    } else {
+        return project.findProperty('MAVEN_REPO_PASS')
+    }
+
+    return ""
+}
+
+/* Artifactory */
+publishing {
+    def paladiumUsername = getRepositoryUser()
+    def paladiumPassword = getRepositoryPassword()
+
+	repositories {
+		mavenLocal()
+		maven {
+			name = "paladium"
+			credentials {
+				username = paladiumUsername
+            	password = paladiumPassword
+			}
+			url = uri("${artifactoryBaseUrl}")
+		}
+	}
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = "fr.paladium"
+			artifactId = "ymir"
+            version = "${version}"
+            artifact deobfJar
+        }
+    }
+}
+
+task deobfJar(type: Jar) {
+    from(sourceSets.main.output.resourcesDir)
+    classifier = 'dev'
+}
+
+/* Custom Task */
+task checkEnv() {
+    if (System.getenv('MAVEN_REPO_USER') == null && project.findProperty('MAVEN_REPO_USER') == null) {
+        System.out.println('[Odin][!] MAVEN_REPO_USER is not set')
+        System.out.println('[Odin] Please contact a paladium administrator to get your credentials')
+        System.exit(1);
+    } else {
+        System.out.println('[Odin][+] Found MAVEN_REPO_USER')
+    }
+
+    if (System.getenv('MAVEN_REPO_PASS') == null && project.findProperty('MAVEN_REPO_PASS') == null) {
+        System.out.println('[Odin][!] MAVEN_REPO_PASS is not set')
+        System.out.println('[Odin] Please contact a paladium administrator to get your credentials')
+        System.exit(1);
+    } else {
+        System.out.println('[Odin][+] Found MAVEN_REPO_PASS')
+    }
+}
+
+task setupMod() {
+    doLast {
+        def console = System.console();
+        if (console == null) {
+            System.out.println('[Odin][!] Console is not available')
+            System.out.println('[Odin] Please run this task in a terminal')
+            System.exit(1);
+        }
+
+        System.out.println('')
+        System.out.println('')
+        System.out.println('##################')
+        System.out.println('#  Creating Mod  #')
+        System.out.println('##################')
+        System.out.println('')
+        System.out.println('Please answer the following questions to setup your mod')
+        System.out.println('')
+
+        System.out.println('[Odin][?] Mod name (waiting input): ')
+        def modName = Character.toString((char) System.in.read()) + new Scanner(System.in).nextLine()
+        if (modName == null || modName == '') {
+            System.out.println('[Odin][!] Mod name is empty')
+            System.exit(1);
+        }
+
+        if (modName.length() < 3) {
+            System.out.println('[Odin][!] Mod name is too short (min 3 chars)')
+            System.exit(1);
+        }
+
+        if (modName.contains(' ')) {
+            System.out.println('[Odin][!] Mod name contains space')
+            System.exit(1);
+        }
+
+        if (!modName.matches('^[A-Z][a-zA-Z0-9]*$')) {
+            System.out.println('[Odin][!] Mod name is not UpperCamelCase')
+            System.exit(1);
+        }
+
+        System.out.println('[Odin][?] Mod id (waiting input): ')
+        def modId = Character.toString((char) System.in.read()) + new Scanner(System.in).nextLine()
+        if (modId == null || modId == '') {
+            System.out.println('[Odin][!] Mod id is empty')
+            System.exit(1);
+        }
+
+        if (modId.length() < 3) {
+            System.out.println('[Odin][!] Mod id is too short (min 3 chars)')
+            System.exit(1);
+        }
+
+        if (modId.contains(' ')) {
+            System.out.println('[Odin][!] Mod id contains space')
+            System.exit(1);
+        }
+
+        if (!modId.matches('^[a-z][a-z0-9]*$')) {
+            System.out.println('[Odin][!] Mod id is not lowercase')
+            System.exit(1);
+        }
+
+        System.out.println('[Odin][?] Mod description (waiting input): ')
+        def modDescription = Character.toString((char) System.in.read()) + new Scanner(System.in).nextLine()
+        if (modDescription == null || modDescription == '') {
+            System.out.println('[Odin][!] Mod description is empty')
+            System.exit(1);
+        }
+
+        System.out.println('[Odin][?] Mod author (waiting input): ')
+        def modAuthor = Character.toString((char) System.in.read()) + new Scanner(System.in).nextLine()
+        if (modAuthor == null || modAuthor == '') {
+            System.out.println('[Odin][!] Mod author is empty')
+            System.exit(1);
+        }
+        
+        System.out.println('')
+        System.out.println('')
+        System.out.println('[Odin][./] Creating mod ' + modName + ' with id ' + modId + ' (' + modDescription + ') by ' + modAuthor)
+        System.out.println('')
+
+        System.out.println('[Odin][./] mcmod.info')
+        def file = new File('src/main/resources/mcmod.info')
+        ant.replace(file: file, token: "\"example\"", value: "\"" + modId + "\"")
+        ant.replace(file: file, token: "\"Example\"", value: "\"" + modName + "\"")
+        ant.replace(file: file, token: "\"Base paladium mod\"", value: "\"" + modDescription + "\"")
+        ant.replace(file: file, token: "\"author\"", value: "\"" + modAuthor + "\"")
+        ant.replace(file: file, token: "fr/paladium/example/ExampleMod.class", value: "fr/paladium/" + modId + "/" + modName + "Mod.class")
+
+        System.out.println('[Odin][./] Constants.java')
+        file = new File('src/main/java/fr/paladium/example/Constants.java')
+        ant.replace(file: file, token: "\"example\"", value: "\"" + modId + "\"")
+
+        System.out.println('[Odin][./] build.gradle')
+        file = new File('build.gradle')
+        ant.replace(file: file, token: "group = \"fr.paladium.example\"", value: "group = \"fr.paladium." + modId + "\"")
+        ant.replace(file: file, token: "archivesBaseName = \"example\"", value: "archivesBaseName = \"" + modId + "\"")
+        ant.replace(file: file, token: "artifactId = \"example\"", value: "artifactId = \"" + modId + "\"")
+        ant.replace(file: file, token: "archiveName \"example.jar\"", value: "archiveName \"" + modId + ".jar\"")
+
+        System.out.println('[Odin][./] github/workflows')
+        file = new File('.github/workflows/release.yml')
+        ant.replace(file: file, token: "FILE: example.jar", value: "FILE: " + modId + ".jar")
+        ant.replace(file: file, token: "NAME: Example", value: "NAME: " + modName)
+
+        System.out.println('[Odin][./] ExampleMod.java')
+        file = new File('src/main/java/fr/paladium/example/ExampleMod.java')
+        ant.replace(file: file, token: "ExampleMod", value: modName + "Mod")
+        ant.move(file:'src/main/java/fr/paladium/example/ExampleMod.java', tofile:'src/main/java/fr/paladium/example/' + modName + 'Mod.java')
+
+        System.out.println('[Odin][./] CommonProxy.java')
+        file = new File('src/main/java/fr/paladium/example/common/CommonProxy.java')
+        ant.replace(file: file, token: "ExampleMod", value: modName + "Mod")
+
+        System.out.println('[Odin][./] Remapping packages...')
+        fileTree(dir: 'src/main/java/fr/paladium/example/', include: '**/*.java').forEach { f ->
+            ant.replace(file: f, token: "fr.paladium.example", value: "fr.paladium." + modId)
+        }
+        ant.move(file:'src/main/java/fr/paladium/example/', tofile:'src/main/java/fr/paladium/' + modId + '/')
+
+        System.out.println('[Odin][./] .git')
+        ant.delete(dir: '.git')
+
+        System.out.println('[Odin][./] README')
+        ant.delete(file: 'README.md')
+        ant.move(file:'README.md.template', tofile:'README.md')
+        file = new File('README.md')
+        ant.replace(file: file, token: "{name}", value: modName)
+        ant.replace(file: file, token: "{modid}", value: modId)
+        ant.replace(file: file, token: "{description}", value: modDescription)
+        ant.replace(file: file, token: "{author}", value: modAuthor)
+
+        System.out.println('[Odin][./] gradle.properties')
+        ant.delete(file: 'gradle.properties')
+        ant.move(file:'gradle.properties.template', tofile:'gradle.properties')
+
+        System.out.println('[Odin][+] Project is ready !')
+    }
+
+}
+
+setupMod.dependsOn setupDecompWorkspace
+setupDecompWorkspace.dependsOn checkEnv

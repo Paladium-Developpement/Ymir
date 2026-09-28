@@ -1,0 +1,17 @@
+[
+  {
+    "modid": "ymir",
+    "name": "Ymir",
+    "description": "Minecraft Forge World Managment",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "https://paladium-pvp.fr",
+    "updateUrl": "",
+    "classes": ["fr/paladium/ymir/YmirMod.class"],
+    "authorList": ["Zeldown"],
+    "credits": "Made with ♥ for Paladium",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
