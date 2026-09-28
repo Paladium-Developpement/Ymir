@@ -22,6 +22,7 @@ import lombok.NonNull;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.common.MinecraftForge;
 
 @Getter
@@ -38,7 +39,20 @@ public final class YmirWorld {
 	}
 
 	public boolean isLoaded() {
-		return this.handle != null && this.bukkitWorld != null;
+		if (this.handle == null || this.bukkitWorld == null) {
+			return false;
+		}
+
+		final int dimensionId = this.handle.provider.dimensionId;
+		if (DimensionManager.getWorld(dimensionId) == this.handle) {
+			return true;
+		}
+
+		this.handle = null;
+		this.bukkitWorld = null;
+		Ymir.detach(dimensionId);
+		YmirWorldDimensions.unregister(dimensionId);
+		return false;
 	}
 
 	public @NonNull String getName() {
@@ -50,7 +64,7 @@ public final class YmirWorld {
 	}
 
 	public int getDimensionId() {
-		return this.isLoaded() ? this.handle.provider.dimensionId : 0;
+		return this.require().handle.provider.dimensionId;
 	}
 
 	public @NonNull YmirWorld keepAlive() {
@@ -138,9 +152,9 @@ public final class YmirWorld {
 		}
 
 		MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Unload(this));
-		Ymir.detach(this);
 		this.bukkitWorld = null;
 		this.handle = null;
+		Ymir.detach(dimensionId);
 
 		YmirWorldFiles.release(this.getDirectory());
 		YmirWorldDimensions.unregister(dimensionId);

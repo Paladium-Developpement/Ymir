@@ -66,8 +66,8 @@ public final class Ymir {
 		Ymir.DIMENSIONS.put(world.getDimensionId(), world);
 	}
 
-	static void detach(final YmirWorld world) {
-		Ymir.DIMENSIONS.remove(world.getDimensionId());
+	static void detach(final int dimensionId) {
+		Ymir.DIMENSIONS.remove(dimensionId);
 	}
 
 	static void forget(final YmirWorld world) {
