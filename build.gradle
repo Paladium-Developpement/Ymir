@@ -58,20 +58,8 @@ apply plugin: 'com.github.johnrengelman.shadow'
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     compile "org.projectlombok:lombok:1.18.22"
-    
-    compile "fr.paladium:palamixins:+:dev"
-    compile "org.spongepowered:mixin:0.7.11-SNAPSHOT"
 
     compile "fr.paladium:palaforge-utils:+:dev"
-    compile "fr.paladium:paladium-ui:+:dev"
-    compile "fr.paladium:zephyr-ui:+:mod"
-    compile "fr.paladium:worldguardbridge:+:dev"
-
-    compile 'org.mongodb:mongodb-driver-sync:4.5.0'
-    compile 'com.rabbitmq:amqp-client:5.21.0'
-    compile 'com.squareup.retrofit2:retrofit:2.9.0'
-    compile 'com.squareup.retrofit2:converter-gson:2.9.0'
-    compile 'com.squareup.retrofit2:converter-scalars:2.9.0'
 }
 
 /* Utils */

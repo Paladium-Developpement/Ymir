@@ -9,45 +9,50 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
-import fr.paladium.ymir.common.CommonProxy;
+import cpw.mods.fml.common.event.FMLServerStoppingEvent;
+import fr.paladium.ymir.internal.common.CommonProxy;
 
-@Mod(modid = Constants.MOD_ID, version = Constants.VERSION, acceptableRemoteVersions = "*")
-public class YmirMod {	
+@Mod(modid = Constants.MOD_ID, version = Constants.VERSION, acceptableRemoteVersions = "*", dependencies = "required-after:palaforge-utils")
+public class YmirMod {
 
 	@Instance(Constants.MOD_ID)
 	private static YmirMod instance;
 
-	@SidedProxy(clientSide = "fr.paladium.ymir.client.ClientProxy", serverSide = "fr.paladium.ymir.server.ServerProxy")
+	@SidedProxy(clientSide = "fr.paladium.ymir.internal.client.ClientProxy", serverSide = "fr.paladium.ymir.internal.server.ServerProxy")
 	public static CommonProxy proxy;
 
 	@EventHandler
-	public void onPreInit(FMLPreInitializationEvent event) {
-		proxy.onPreInit(event);
+	public void onPreInit(final FMLPreInitializationEvent event) {
+		YmirMod.proxy.onPreInit(event);
 	}
 
 	@EventHandler
-	public void onInit(FMLInitializationEvent event) {
-		proxy.onInit(event);
+	public void onInit(final FMLInitializationEvent event) {
+		YmirMod.proxy.onInit(event);
 	}
 
 	@EventHandler
-	public void onPostInit(FMLPostInitializationEvent event) {
-		proxy.onPostInit(event);
+	public void onPostInit(final FMLPostInitializationEvent event) {
+		YmirMod.proxy.onPostInit(event);
 	}
 
 	@EventHandler
-	public void onServerStarting(FMLServerStartingEvent event) {
-		proxy.onServerStarting(event);
+	public void onServerStarting(final FMLServerStartingEvent event) {
+		YmirMod.proxy.onServerStarting(event);
 	}
 
 	@EventHandler
-	public void onServerStarted(FMLServerStartedEvent event) {
-		proxy.onServerStarted(event);
+	public void onServerStarted(final FMLServerStartedEvent event) {
+		YmirMod.proxy.onServerStarted(event);
 	}
 
-	/* Instance */
+	@EventHandler
+	public void onServerStopping(final FMLServerStoppingEvent event) {
+		YmirMod.proxy.onServerStopping(event);
+	}
+
 	public static YmirMod getInstance() {
-		return instance;
+		return YmirMod.instance;
 	}
 
 }
