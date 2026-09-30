@@ -67,6 +67,17 @@ world.delete();
 
 La copie se fait hors du thread serveur et vous rend la main dessus : la suite du `thenAccept` s'exécute là où vous pouvez toucher au jeu. La suppression exige un monde vide de joueurs, sinon elle lève une `YmirWorldException`.
 
+Les deux existent aussi à partir d'une simple configuration, sans jamais charger le monde :
+
+```java
+Ymir.copy(YmirWorldConfig.create("arene"), YmirWorldConfig.create("arene-2"));
+Ymir.delete(YmirWorldConfig.create("arene"));
+```
+
+Un monde chargé est déchargé proprement avant l'opération, un monde absent du serveur est traité directement sur le disque. C'est la forme à utiliser pour régénérer ou archiver un monde que personne n'occupe.
+
+N'appelez jamais `.join()` sur ces futures depuis le thread serveur : elles se terminent dessus, vous attendriez votre propre tick. Enchaînez avec `thenAccept` ou `whenComplete`.
+
 ### Partir d'un modèle
 
 ```java
