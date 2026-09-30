@@ -12,7 +12,6 @@ import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 
-import fr.paladium.palaforgeutils.lib.scheduler.MinecraftThread;
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.YmirWorldGuard;
