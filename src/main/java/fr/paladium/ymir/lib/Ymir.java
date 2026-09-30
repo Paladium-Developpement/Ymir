@@ -52,10 +52,7 @@ public final class Ymir {
 
 	public static @NonNull CompletableFuture<YmirWorld> createAsync(final @NonNull YmirWorldConfig config) {
 		final YmirWorld world = Ymir.of(config);
-		return CompletableFuture.supplyAsync(() -> {
-			YmirWorldFiles.prepare(config);
-			return world;
-		}).thenApplyAsync(YmirWorld::load, MinecraftThread::execute);
+		return CompletableFuture.supplyAsync(world::prepare).thenApplyAsync(YmirWorld::load, MinecraftThread::execute);
 	}
 
 	public static void unloadAll() {

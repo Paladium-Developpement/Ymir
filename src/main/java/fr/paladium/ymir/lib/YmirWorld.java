@@ -17,6 +17,7 @@ import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.YmirWorldGuard;
 import fr.paladium.ymir.lib.event.YmirWorldEvent;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -33,6 +34,9 @@ public final class YmirWorld {
 	private long        emptySince;
 	private World       bukkitWorld;
 	private WorldServer handle;
+
+	@Getter(AccessLevel.NONE) private boolean fresh;
+	@Getter(AccessLevel.NONE) private boolean prepared;
 
 	protected YmirWorld(final @NonNull YmirWorldConfig config) {
 		this.config = config;
@@ -99,8 +103,7 @@ public final class YmirWorld {
 			return this;
 		}
 
-		final boolean created = !Ymir.exists(this.getName());
-		YmirWorldFiles.prepare(this.config);
+		this.prepare();
 		YmirWorldFiles.reset(this.getDirectory(), this.getName());
 
 		this.bukkitWorld = Bukkit.createWorld(this.creator());
@@ -124,7 +127,8 @@ public final class YmirWorld {
 			YmirWorldGuard.load(this.bukkitWorld);
 		}
 
-		if (created) {
+		if (this.fresh) {
+			this.fresh = false;
 			this.platform();
 			MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Create(this));
 		}
@@ -222,6 +226,15 @@ public final class YmirWorld {
 
 	public @NonNull YmirWorld setGamerule(final @NonNull String key, final @NonNull String value) {
 		this.require().handle.getGameRules().setOrCreateGameRule(key, value);
+		return this;
+	}
+
+	@NonNull YmirWorld prepare() {
+		if (!this.prepared) {
+			this.fresh = !Ymir.exists(this.getName());
+			this.prepared = true;
+			YmirWorldFiles.prepare(this.config);
+		}
 		return this;
 	}
 
