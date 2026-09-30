@@ -183,26 +183,11 @@ public final class YmirWorld {
 	}
 
 	public @NonNull CompletableFuture<YmirWorld> copy(final @NonNull String name) {
-		return this.copy(this.config.copy(name));
+		return Ymir.copy(this.config, this.config.copy(name));
 	}
 
 	public @NonNull CompletableFuture<YmirWorld> copy(final @NonNull YmirWorldConfig config) {
-		if (Ymir.exists(config.getName()) || Ymir.get(config.getName()).isPresent()) {
-			throw new YmirWorldException("The world " + config.getName() + " already exists");
-		}
-
-		this.save();
-
-		final String name = this.getName();
-		final File source = this.getDirectory();
-		final File target = YmirWorldFiles.getDirectory(config.getName());
-		return CompletableFuture.supplyAsync(() -> {
-			YmirWorldFiles.flush();
-			YmirWorldFiles.copy(source, target);
-			YmirWorldFiles.reset(target, config.getName());
-			YmirWorldFiles.copyLinked(this.config, name, config.getName());
-			return config;
-		}).thenApplyAsync(Ymir::create, MinecraftThread::execute);
+		return Ymir.copy(this.config, config);
 	}
 
 	public boolean teleport(final @NonNull EntityPlayerMP player) {

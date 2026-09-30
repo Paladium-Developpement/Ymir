@@ -55,6 +55,28 @@ public final class Ymir {
 		return CompletableFuture.supplyAsync(world::prepare).thenApplyAsync(YmirWorld::load, MinecraftThread::execute);
 	}
 
+	public static void delete(final @NonNull YmirWorldConfig config) {
+		Ymir.of(config).delete();
+	}
+
+	public static @NonNull CompletableFuture<YmirWorld> copy(final @NonNull YmirWorldConfig source, final @NonNull YmirWorldConfig target) {
+		if (Ymir.exists(target.getName()) || Ymir.get(target.getName()).isPresent()) {
+			throw new YmirWorldException("The world " + target.getName() + " already exists");
+		}
+
+		Ymir.get(source.getName()).ifPresent(YmirWorld::save);
+
+		final File from = YmirWorldFiles.getDirectory(source.getName());
+		final File to = YmirWorldFiles.getDirectory(target.getName());
+		return CompletableFuture.supplyAsync(() -> {
+			YmirWorldFiles.flush();
+			YmirWorldFiles.copy(from, to);
+			YmirWorldFiles.reset(to, target.getName());
+			YmirWorldFiles.copyLinked(source, source.getName(), target.getName());
+			return target;
+		}).thenApplyAsync(Ymir::create, MinecraftThread::execute);
+	}
+
 	public static void unloadAll() {
 		Ymir.getWorlds().forEach(YmirWorld::unload);
 	}
