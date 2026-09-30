@@ -19,7 +19,7 @@ public final class YmirWorldDimensions {
 	}
 
 	public static void unregister(final int dimensionId) {
-		if (DimensionManager.isDimensionRegistered(dimensionId)) {
+		if (DimensionManager.getWorld(dimensionId) == null && DimensionManager.isDimensionRegistered(dimensionId)) {
 			DimensionManager.unregisterDimension(dimensionId);
 		}
 	}

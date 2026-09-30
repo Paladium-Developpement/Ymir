@@ -54,7 +54,7 @@ public final class YmirWorld {
 
 		this.handle = null;
 		this.bukkitWorld = null;
-		Ymir.detach(dimensionId);
+		Ymir.detach(dimensionId, this);
 		YmirWorldDimensions.unregister(dimensionId);
 		return false;
 	}
@@ -101,6 +101,10 @@ public final class YmirWorld {
 	public @NonNull YmirWorld load() {
 		if (this.isLoaded()) {
 			return this;
+		}
+
+		if (this.getName().equals(YmirWorldFiles.getMainWorldName())) {
+			throw new YmirWorldException("The main world " + this.getName() + " cannot be managed by Ymir");
 		}
 
 		this.prepare();
@@ -158,7 +162,7 @@ public final class YmirWorld {
 		MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Unload(this));
 		this.bukkitWorld = null;
 		this.handle = null;
-		Ymir.detach(dimensionId);
+		Ymir.detach(dimensionId, this);
 
 		YmirWorldFiles.release(this.getDirectory());
 		YmirWorldDimensions.unregister(dimensionId);
@@ -232,8 +236,8 @@ public final class YmirWorld {
 	@NonNull YmirWorld prepare() {
 		if (!this.prepared) {
 			this.fresh = !Ymir.exists(this.getName());
-			this.prepared = true;
 			YmirWorldFiles.prepare(this.config);
+			this.prepared = true;
 		}
 		return this;
 	}

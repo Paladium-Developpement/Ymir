@@ -44,6 +44,14 @@ public final class YmirWorldFiles {
 		return overworld.getSaveHandler().getWorldDirectory();
 	}
 
+	public static String getMainWorldName() {
+		final WorldServer overworld = DimensionManager.getWorld(0);
+		if (overworld == null) {
+			throw new YmirWorldException("The main world is not loaded yet");
+		}
+		return overworld.getWorldInfo().getWorldName();
+	}
+
 	public static File getDirectory(final String name) {
 		return new File(YmirWorldFiles.getContainer(), name);
 	}
