@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Ymir {
@@ -64,7 +65,9 @@ public final class Ymir {
 			throw new YmirWorldException("The world " + target.getName() + " already exists");
 		}
 
-		Ymir.get(source.getName()).ifPresent(YmirWorld::save);
+		final Optional<WorldServer> loaded = Ymir.get(source.getName()).filter(YmirWorld::isLoaded).map(YmirWorld::save).map(YmirWorld::getHandle);
+		final boolean levelSaving = loaded.map(handle -> handle.levelSaving).orElse(false);
+		loaded.ifPresent(handle -> handle.levelSaving = true);
 
 		final File from = YmirWorldFiles.getDirectory(source.getName());
 		final File to = YmirWorldFiles.getDirectory(target.getName());
@@ -74,7 +77,7 @@ public final class Ymir {
 			YmirWorldFiles.reset(to, target.getName());
 			YmirWorldFiles.copyLinked(source, source.getName(), target.getName());
 			return target;
-		}).thenApplyAsync(Ymir::create, MinecraftThread::execute);
+		}).whenCompleteAsync((config, error) -> loaded.ifPresent(handle -> handle.levelSaving = levelSaving), MinecraftThread::execute).thenApplyAsync(Ymir::create, MinecraftThread::execute);
 	}
 
 	public static void unloadAll() {
