@@ -4,6 +4,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import fr.paladium.ymir.internal.common.CommonProxy;
+import fr.paladium.ymir.internal.server.listener.YmirConnectionListener;
 import fr.paladium.ymir.internal.server.listener.YmirSpawnListener;
 import fr.paladium.ymir.internal.server.task.YmirUnloadTask;
 import fr.paladium.ymir.internal.world.YmirVoidWorldType;
@@ -16,6 +17,7 @@ public class ServerProxy extends CommonProxy {
 		super.onPreInit(event);
 		YmirVoidWorldType.register();
 		super.addListener(YmirSpawnListener.class);
+		super.addListener(YmirConnectionListener.class);
 	}
 
 	@Override

@@ -5,16 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
-import org.bukkit.WorldType;
-import org.bukkit.entity.Player;
 
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
-import fr.paladium.ymir.internal.world.YmirWorldGuard;
+import fr.paladium.ymir.internal.world.backend.YmirWorldBackend;
 import fr.paladium.ymir.lib.event.YmirWorldEvent;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -31,7 +26,6 @@ public final class YmirWorld {
 	private final YmirWorldConfig config;
 
 	private long        emptySince;
-	private World       bukkitWorld;
 	private WorldServer handle;
 
 	@Getter(AccessLevel.NONE) private boolean fresh;
@@ -42,7 +36,7 @@ public final class YmirWorld {
 	}
 
 	public boolean isLoaded() {
-		if (this.handle == null || this.bukkitWorld == null) {
+		if (this.handle == null) {
 			return false;
 		}
 
@@ -52,7 +46,6 @@ public final class YmirWorld {
 		}
 
 		this.handle = null;
-		this.bukkitWorld = null;
 		Ymir.detach(dimensionId, this);
 		YmirWorldDimensions.unregister(dimensionId);
 		return false;
@@ -68,6 +61,10 @@ public final class YmirWorld {
 
 	public int getDimensionId() {
 		return this.require().handle.provider.dimensionId;
+	}
+
+	public World getBukkitWorld() {
+		return this.isLoaded() ? YmirWorldBackend.get().getBukkitWorld(this) : null;
 	}
 
 	public @NonNull YmirWorld keepAlive() {
@@ -92,7 +89,7 @@ public final class YmirWorld {
 
 	public @NonNull YmirWorld save() {
 		if (this.isLoaded()) {
-			this.bukkitWorld.save();
+			YmirWorldBackend.get().save(this);
 		}
 		return this;
 	}
@@ -109,26 +106,10 @@ public final class YmirWorld {
 		this.prepare();
 		YmirWorldFiles.reset(this.getDirectory(), this.getName());
 
-		this.bukkitWorld = Bukkit.createWorld(this.creator());
-		if (this.bukkitWorld == null) {
-			throw new YmirWorldException("Bukkit refused to create the world " + this.getName());
-		}
-
-		this.handle = YmirWorldDimensions.find(this.getName());
-		if (this.handle == null) {
-			this.bukkitWorld = null;
-			throw new YmirWorldException("Unable to find the world server of " + this.getName());
-		}
-
-		this.bukkitWorld.setKeepSpawnInMemory(this.config.isKeepSpawnInMemory());
-		this.bukkitWorld.setAutoSave(this.config.isAutoSave());
+		this.handle = YmirWorldBackend.get().load(this);
 		this.config.getGamerules().forEach(this::setGamerule);
 		this.keepAlive();
 		Ymir.attach(this);
-
-		if (this.config.isWorldGuard()) {
-			YmirWorldGuard.load(this.bukkitWorld);
-		}
 
 		if (this.fresh) {
 			this.fresh = false;
@@ -154,12 +135,11 @@ public final class YmirWorld {
 		}
 
 		final int dimensionId = this.getDimensionId();
-		if (!Bukkit.unloadWorld(this.bukkitWorld, save)) {
+		if (!YmirWorldBackend.get().unload(this, save)) {
 			return false;
 		}
 
 		MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Unload(this));
-		this.bukkitWorld = null;
 		this.handle = null;
 		Ymir.detach(dimensionId, this);
 
@@ -195,16 +175,11 @@ public final class YmirWorld {
 	}
 
 	public boolean teleport(final @NonNull EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {
-		final Player bukkitPlayer = Bukkit.getPlayer(player.getUniqueID());
-		if (bukkitPlayer == null) {
-			return false;
-		}
-
-		return bukkitPlayer.teleport(new Location(this.load().bukkitWorld, x, y, z, yaw, pitch));
+		return YmirWorldBackend.get().teleport(this.load(), player, x, y, z, yaw, pitch);
 	}
 
 	public @NonNull YmirWorld setSpawn(final int x, final int y, final int z) {
-		this.require().bukkitWorld.setSpawnLocation(x, y, z);
+		YmirWorldBackend.get().setSpawn(this.require(), x, y, z);
 		return this;
 	}
 
@@ -244,20 +219,6 @@ public final class YmirWorld {
 				this.handle.setBlock(spawn.posX + x, spawn.posY - 1, spawn.posZ + z, this.config.getPlatformBlock());
 			}
 		}
-	}
-
-	private @NonNull WorldCreator creator() {
-		final WorldType type = WorldType.getByName(this.config.getType().getName());
-		if (type == null) {
-			throw new YmirWorldException("The world type " + this.config.getType().getName() + " is not registered");
-		}
-
-		final WorldCreator creator = new WorldCreator(this.getName());
-		creator.generateStructures(this.config.isStructures());
-		creator.environment(this.config.getEnvironment());
-		creator.seed(this.config.getSeed());
-		creator.type(type);
-		return creator;
 	}
 
 }

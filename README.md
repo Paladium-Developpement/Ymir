@@ -31,6 +31,7 @@ Créer un monde à chaud, c'est trois lignes. Le faire sans rien casser, beaucou
 - **Suppression sans course.** Le dossier est renommé dans une corbeille avant d'être effacé en arrière-plan : on peut recréer un monde du même nom immédiatement.
 - **Un vide vraiment vide.** Le type `VOID` est un vrai type de monde Forge, pas un générateur Bukkit — ce dernier est ignoré dès qu'un mod fournit le provider du monde. Les chunks sont marqués décorés, donc aucun mod ne vient y semer de minerai.
 - **Déchargement automatique** des mondes inactifs, et rien à faire à l'arrêt du serveur.
+- **Aussi sans Bukkit.** Sur un serveur Forge seul, comme l'environnement de développement, Ymir crée, charge et téléporte lui-même, avec la même API et les mêmes dossiers sur le disque. Comme sous Bukkit, un monde ne se décharge jamais de lui-même : seul `unloadAfter` ou un appel à `unload` le décharge.
 
 ## Utilisation
 
@@ -114,7 +115,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `platform` | aucune | plateforme carrée de ce rayon sous le spawn, utile pour un monde vide |
 | `gamerule` | aucune | gamerules appliquées à chaque chargement |
 | `unloadAfter` | jamais | déchargement après ce temps sans joueur |
-| `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés |
+| `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) |
 | `autoSave` | `true` | sauvegarde automatique |
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |
