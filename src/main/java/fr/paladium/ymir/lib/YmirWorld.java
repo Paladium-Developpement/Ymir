@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.common.MinecraftForge;
@@ -175,7 +176,11 @@ public final class YmirWorld {
 	}
 
 	public boolean teleport(final @NonNull EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {
-		return YmirWorldBackend.get().teleport(this.load(), player, x, y, z, yaw, pitch);
+		final boolean teleported = YmirWorldBackend.get().teleport(this.load(), player, x, y, z, yaw, pitch);
+		if (teleported && player.worldObj == this.handle) {
+			this.relocate(player);
+		}
+		return teleported;
 	}
 
 	public @NonNull YmirWorld setSpawn(final int x, final int y, final int z) {
@@ -206,6 +211,19 @@ public final class YmirWorld {
 			throw new YmirWorldException("The world " + this.getName() + " is not loaded");
 		}
 		return this;
+	}
+
+	private void relocate(final EntityPlayerMP player) {
+		final int chunkX = MathHelper.floor_double(player.posX / 16D);
+		final int chunkZ = MathHelper.floor_double(player.posZ / 16D);
+		if (player.addedToChunk && player.chunkCoordX == chunkX && player.chunkCoordZ == chunkZ) {
+			return;
+		}
+
+		if (player.addedToChunk && this.handle.getChunkProvider().chunkExists(player.chunkCoordX, player.chunkCoordZ)) {
+			this.handle.getChunkFromChunkCoords(player.chunkCoordX, player.chunkCoordZ).removeEntityAtIndex(player, player.chunkCoordY);
+		}
+		this.handle.getChunkFromChunkCoords(chunkX, chunkZ).addEntity(player);
 	}
 
 	private void platform() {
