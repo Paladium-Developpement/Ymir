@@ -136,6 +136,7 @@ public final class YmirWorld {
 		}
 
 		final int dimensionId = this.getDimensionId();
+		final boolean written = save || !this.handle.levelSaving;
 		if (!YmirWorldBackend.get().unload(this, save)) {
 			return false;
 		}
@@ -144,7 +145,7 @@ public final class YmirWorld {
 		this.handle = null;
 		Ymir.detach(dimensionId, this);
 
-		YmirWorldFiles.release(this.getDirectory());
+		YmirWorldFiles.release(this.getDirectory(), written);
 		YmirWorldDimensions.unregister(dimensionId);
 		return true;
 	}

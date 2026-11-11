@@ -123,8 +123,10 @@ public final class YmirWorldFiles {
 		}
 	}
 
-	public static void release(final File directory) {
-		YmirWorldFiles.flush();
+	public static void release(final File directory, final boolean written) {
+		if (written) {
+			YmirWorldFiles.flush();
+		}
 
 		final Map<File, RegionFile> regions = YmirWorldFiles.regions();
 		if (regions == null) {
