@@ -74,7 +74,7 @@ public final class Ymir {
 		return CompletableFuture.supplyAsync(() -> {
 			YmirWorldFiles.flush();
 			YmirWorldFiles.copy(from, to);
-			YmirWorldFiles.reset(to, target.getName());
+			YmirWorldFiles.reset(to, target);
 			YmirWorldFiles.copyLinked(source, source.getName(), target.getName());
 			return target;
 		}).whenCompleteAsync((config, error) -> loaded.ifPresent(handle -> handle.levelSaving = levelSaving), MinecraftThread::execute).thenApplyAsync(Ymir::create, MinecraftThread::execute);

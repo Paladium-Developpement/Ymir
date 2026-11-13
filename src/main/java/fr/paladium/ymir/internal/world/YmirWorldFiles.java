@@ -20,6 +20,7 @@ import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
+import fr.paladium.ymir.lib.YmirWorldType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import net.minecraft.nbt.CompressedStreamTools;
@@ -128,7 +129,7 @@ public final class YmirWorldFiles {
 		}
 	}
 
-	public static void reset(final File directory, final String name) {
+	public static void reset(final File directory, final YmirWorldConfig config) {
 		final File level = new File(directory, YmirWorldFiles.LEVEL);
 		if (!level.exists()) {
 			return;
@@ -142,7 +143,11 @@ public final class YmirWorldFiles {
 
 			final NBTTagCompound data = root.getCompoundTag("Data");
 			data.setInteger("dimension", 0);
-			data.setString("LevelName", name);
+			data.setString("LevelName", config.getName());
+			if (config.getType() != YmirWorldType.NORMAL) {
+				data.setString("generatorName", config.getType().getName());
+				data.setInteger("generatorVersion", 0);
+			}
 			data.removeTag("Player");
 			root.setTag("Data", data);
 
@@ -150,7 +155,7 @@ public final class YmirWorldFiles {
 				CompressedStreamTools.writeCompressed(root, output);
 			}
 		} catch (final IOException e) {
-			throw new YmirWorldException("Unable to release the dimension identifier of the world " + name, e);
+			throw new YmirWorldException("Unable to release the dimension identifier of the world " + config.getName(), e);
 		}
 	}
 

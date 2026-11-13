@@ -128,7 +128,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 
 | Option | Défaut | Rôle |
 |---|---|---|
-| `type` | `NORMAL` | `NORMAL`, `FLAT`, `AMPLIFIED`, `LARGE_BIOMES` ou `VOID` |
+| `type` | `NORMAL` | `NORMAL`, `FLAT`, `AMPLIFIED`, `LARGE_BIOMES` ou `VOID` ; un type autre que `NORMAL` remplace celui d'un modèle |
 | `seed` | aléatoire | graine, numérique ou textuelle |
 | `structures` | `true` | génération des structures |
 | `environment` | `NORMAL` | `NORMAL`, `NETHER` ou `THE_END` |

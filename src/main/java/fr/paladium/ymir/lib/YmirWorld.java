@@ -112,7 +112,7 @@ public final class YmirWorld {
 
 		this.prepare();
 		if (!this.reset) {
-			YmirWorldFiles.reset(this.getDirectory(), this.getName());
+			YmirWorldFiles.reset(this.getDirectory(), this.config);
 		}
 		this.reset = false;
 
@@ -231,7 +231,7 @@ public final class YmirWorld {
 		if (!this.prepared) {
 			this.fresh = !Ymir.exists(this.getName());
 			YmirWorldFiles.prepare(this.config);
-			YmirWorldFiles.reset(this.getDirectory(), this.getName());
+			YmirWorldFiles.reset(this.getDirectory(), this.config);
 			this.reset = true;
 			this.prepared = true;
 		}
