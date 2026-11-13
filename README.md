@@ -99,7 +99,7 @@ public void onCreate(final YmirWorldEvent.Create event) {
 }
 ```
 
-`Create`, `Load`, `Unload` et `Delete` sont postés sur le bus Forge.
+`Create`, `Load`, `Unload` et `Delete` sont postés sur le bus Forge, ainsi que `YmirPlayerEvent.Enter` et `YmirPlayerEvent.Leave` quand un joueur entre dans un monde Ymir ou en sort, connexion, déconnexion, mort et téléportation comprises.
 
 ## Options
 
@@ -120,6 +120,31 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |
 | `worldGuard` | `false` | copie la configuration WorldGuard du monde principal et charge les régions du nouveau monde |
+| `chat` | aucun | chat propre au monde et accès aux chats serveur et global, appliqués par PalaChats |
+| `tab` | `SERVER` | joueurs affichés dans le tab, appliqués par le plugin Tab |
+
+Le chat et le tab se décrivent dans Ymir et sont appliqués par les mods qui les affichent :
+
+```java
+YmirWorldConfig.create("donjon-" + id)
+    .chat(YmirWorldChat.create()
+        .name("dungeon")
+        .server(false)
+        .prefix(YmirWorldChatPrefix.emote("dungeon")))
+    .tab(YmirWorldTab.create(YmirWorldTabScope.WORLD));
+```
+
+| Option du chat | Défaut | Rôle |
+|---|---|---|
+| `name` | aucun | nom de l'onglet du chat du monde, réservé aux joueurs présents dans le monde et sélectionné à l'entrée ; sans nom, pas de chat de monde |
+| `server` | `true` | accès au chat serveur ; `false` le coupe dans les deux sens |
+| `global` | `true` | accès au chat global ; `false` le coupe dans les deux sens |
+| `prefix` | celui du serveur | `none()`, `emote(clé)` de la configuration d'emotes ou `url(lien)` d'une image, devant les messages envoyés depuis le monde |
+
+| Option du tab | Défaut | Rôle |
+|---|---|---|
+| `create(portée)` | | `SERVER` tout le serveur, `WORLD` les joueurs du monde, `SELF` soi seul |
+| `visible` | `true` | `false` retire les joueurs du monde du tab des joueurs de l'extérieur |
 
 Un dossier lié se déclare par une fonction, pour qu'Ymir sache le nommer quand vous copiez le monde :
 

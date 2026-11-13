@@ -40,6 +40,8 @@ public class YmirWorldConfig {
 	private Block            platformBlock = Blocks.stone;
 	private Environment      environment = Environment.NORMAL;
 	private YmirWorldType    type = YmirWorldType.NORMAL;
+	private YmirWorldTab     tab;
+	private YmirWorldChat    chat;
 
 	private final List<Function<String, File>> linked = new ArrayList<>();
 	private final Map<String, String>          gamerules = new LinkedHashMap<>();
@@ -69,6 +71,8 @@ public class YmirWorldConfig {
 		config.environment = this.environment;
 		config.platformBlock = this.platformBlock;
 		config.keepSpawnInMemory = this.keepSpawnInMemory;
+		config.tab = this.tab;
+		config.chat = this.chat;
 		config.linked.addAll(this.linked);
 		config.gamerules.putAll(this.gamerules);
 		return config;
@@ -120,6 +124,16 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C type(final @NonNull YmirWorldType type) {
 		this.type = type;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C tab(final @NonNull YmirWorldTab tab) {
+		this.tab = tab;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C chat(final @NonNull YmirWorldChat chat) {
+		this.chat = chat;
 		return (C) this;
 	}
 
