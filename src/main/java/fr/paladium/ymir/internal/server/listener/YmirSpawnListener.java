@@ -7,6 +7,7 @@ import fr.paladium.ymir.internal.world.YmirVoidWorldType;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
+import fr.paladium.ymir.lib.YmirWorldType;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraftforge.event.world.WorldEvent;
 
@@ -19,7 +20,7 @@ public class YmirSpawnListener {
 			return;
 		}
 
-		final ChunkCoordinates spawn = YmirSpawnListener.spawn(world.get().getConfig());
+		final ChunkCoordinates spawn = YmirSpawnListener.spawn(world.get().getConfig(), event.world.provider.getAverageGroundLevel());
 		if (spawn == null) {
 			return;
 		}
@@ -28,13 +29,17 @@ public class YmirSpawnListener {
 		event.setCanceled(true);
 	}
 
-	private static ChunkCoordinates spawn(final YmirWorldConfig config) {
+	private static ChunkCoordinates spawn(final YmirWorldConfig config, final int ground) {
 		if (config.getSpawn() != null) {
 			return config.getSpawn();
 		}
 
 		if (config.getType().isVoid()) {
 			return new ChunkCoordinates(0, YmirVoidWorldType.SPAWN_HEIGHT + 1, 0);
+		}
+
+		if (config.getType() == YmirWorldType.FLAT) {
+			return new ChunkCoordinates(0, ground, 0);
 		}
 
 		return null;

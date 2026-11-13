@@ -30,12 +30,17 @@ public class YmirWorldConfig {
 
 	private long             seed = new Random().nextLong();
 	private int              platform;
+	private int              preload;
+	private Long             time;
+	private boolean          weather = true;
+	private boolean          temporary;
 	private boolean          worldGuard;
 	private boolean          autoSave = true;
 	private boolean          structures = true;
 	private boolean          keepSpawnInMemory;
 	private File             template;
 	private Duration         unloadAfter;
+	private Duration         deleteAfter;
 	private ChunkCoordinates spawn;
 	private Block            platformBlock = Blocks.stone;
 	private Environment      environment = Environment.NORMAL;
@@ -63,11 +68,16 @@ public class YmirWorldConfig {
 		config.seed = this.seed;
 		config.type = this.type;
 		config.spawn = this.spawn;
+		config.time = this.time;
+		config.preload = this.preload;
+		config.weather = this.weather;
 		config.platform = this.platform;
+		config.temporary = this.temporary;
 		config.autoSave = this.autoSave;
 		config.worldGuard = this.worldGuard;
 		config.structures = this.structures;
 		config.unloadAfter = this.unloadAfter;
+		config.deleteAfter = this.deleteAfter;
 		config.environment = this.environment;
 		config.platformBlock = this.platformBlock;
 		config.keepSpawnInMemory = this.keepSpawnInMemory;
@@ -94,6 +104,27 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C platform(final int radius) {
 		this.platform = radius;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C time(final long time) {
+		this.time = time;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C preload(final int radius) {
+		this.preload = radius;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C weather(final boolean weather) {
+		this.weather = weather;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C temporary(final boolean temporary) {
+		this.temporary = temporary;
+		this.autoSave = this.autoSave && !temporary;
 		return (C) this;
 	}
 
@@ -144,6 +175,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C unloadAfter(final @NonNull Duration unloadAfter) {
 		this.unloadAfter = unloadAfter;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C deleteAfter(final @NonNull Duration deleteAfter) {
+		this.deleteAfter = deleteAfter;
 		return (C) this;
 	}
 

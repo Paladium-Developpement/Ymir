@@ -2,11 +2,14 @@ package fr.paladium.ymir.lib;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.bukkit.World;
 
+import fr.paladium.ymir.internal.world.YmirWorldChunks;
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.backend.YmirWorldBackend;
@@ -17,7 +20,9 @@ import lombok.NonNull;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.WorldServer;
+import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.common.MinecraftForge;
 
@@ -29,6 +34,7 @@ public final class YmirWorld {
 	private long        emptySince;
 	private WorldServer handle;
 
+	@Getter(AccessLevel.NONE) private boolean reset;
 	@Getter(AccessLevel.NONE) private boolean fresh;
 	@Getter(AccessLevel.NONE) private boolean prepared;
 
@@ -105,10 +111,14 @@ public final class YmirWorld {
 		}
 
 		this.prepare();
-		YmirWorldFiles.reset(this.getDirectory(), this.getName());
+		if (!this.reset) {
+			YmirWorldFiles.reset(this.getDirectory(), this.getName());
+		}
+		this.reset = false;
 
 		this.handle = YmirWorldBackend.get().load(this);
 		this.config.getGamerules().forEach(this::setGamerule);
+		this.climate();
 		this.keepAlive();
 		Ymir.attach(this);
 
@@ -136,8 +146,9 @@ public final class YmirWorld {
 		}
 
 		final int dimensionId = this.getDimensionId();
-		final boolean written = save || !this.handle.levelSaving;
-		if (!YmirWorldBackend.get().unload(this, save)) {
+		final boolean saving = save && !this.config.isTemporary();
+		final boolean written = saving || !this.handle.levelSaving;
+		if (!YmirWorldBackend.get().unload(this, saving)) {
 			return false;
 		}
 
@@ -184,6 +195,24 @@ public final class YmirWorld {
 		return teleported;
 	}
 
+	public @NonNull CompletableFuture<YmirWorld> preload(final @NonNull ChunkCoordIntPair... chunks) {
+		return this.preload(Arrays.asList(chunks));
+	}
+
+	public @NonNull CompletableFuture<YmirWorld> preload(final int chunkX, final int chunkZ, final int radius) {
+		final List<ChunkCoordIntPair> chunks = new ArrayList<>();
+		for (int x = chunkX - radius; x <= chunkX + radius; x++) {
+			for (int z = chunkZ - radius; z <= chunkZ + radius; z++) {
+				chunks.add(new ChunkCoordIntPair(x, z));
+			}
+		}
+		return this.preload(chunks);
+	}
+
+	public @NonNull CompletableFuture<YmirWorld> preload(final @NonNull Collection<ChunkCoordIntPair> chunks) {
+		return YmirWorldChunks.preload(this.require(), chunks);
+	}
+
 	public @NonNull YmirWorld setSpawn(final int x, final int y, final int z) {
 		YmirWorldBackend.get().setSpawn(this.require(), x, y, z);
 		return this;
@@ -202,9 +231,20 @@ public final class YmirWorld {
 		if (!this.prepared) {
 			this.fresh = !Ymir.exists(this.getName());
 			YmirWorldFiles.prepare(this.config);
+			YmirWorldFiles.reset(this.getDirectory(), this.getName());
+			this.reset = true;
 			this.prepared = true;
 		}
 		return this;
+	}
+
+	@NonNull CompletableFuture<YmirWorld> preloadSpawn() {
+		if (this.config.getPreload() <= 0) {
+			return CompletableFuture.completedFuture(this);
+		}
+
+		final ChunkCoordinates spawn = this.require().handle.getSpawnPoint();
+		return this.preload(spawn.posX >> 4, spawn.posZ >> 4, this.config.getPreload());
 	}
 
 	private @NonNull YmirWorld require() {
@@ -225,6 +265,21 @@ public final class YmirWorld {
 			this.handle.getChunkFromChunkCoords(player.chunkCoordX, player.chunkCoordZ).removeEntityAtIndex(player, player.chunkCoordY);
 		}
 		this.handle.getChunkFromChunkCoords(chunkX, chunkZ).addEntity(player);
+	}
+
+	private void climate() {
+		if (this.config.getTime() != null) {
+			this.handle.setWorldTime(this.config.getTime());
+			this.setGamerule("doDaylightCycle", false);
+		}
+
+		if (!this.config.isWeather()) {
+			final WorldInfo info = this.handle.getWorldInfo();
+			info.setRaining(false);
+			info.setThundering(false);
+			info.setRainTime(Integer.MAX_VALUE);
+			info.setThunderTime(Integer.MAX_VALUE);
+		}
 	}
 
 	private void platform() {

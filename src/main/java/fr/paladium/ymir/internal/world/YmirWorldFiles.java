@@ -16,6 +16,8 @@ import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
 
+import fr.paladium.ymir.lib.Ymir;
+import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
 import lombok.AccessLevel;
@@ -32,9 +34,10 @@ import net.minecraftforge.common.DimensionManager;
 public final class YmirWorldFiles {
 
 	private static final String LEVEL = "level.dat";
+	private static final String TEMPORARY = ".ymir-temporary";
 	private static final String TRASH_PREFIX = ".ymir-trash-";
 	private static final String[] CACHE_FIELDS = { "REGIONS_BY_FILE", "field_76553_a", "regionsByFilename" };
-	private static final String[] COPY_EXCLUDES = { "session.lock", "uid.dat", "playerdata", "stats", "advancements" };
+	private static final String[] COPY_EXCLUDES = { "session.lock", "uid.dat", "playerdata", "stats", "advancements", ".ymir-temporary" };
 
 	public static File getContainer() {
 		final WorldServer overworld = DimensionManager.getWorld(0);
@@ -76,6 +79,34 @@ public final class YmirWorldFiles {
 		if (config.isWorldGuard()) {
 			YmirWorldGuard.prepare(config.getName());
 		}
+
+		if (config.isTemporary()) {
+			YmirWorldFiles.mark(YmirWorldFiles.getDirectory(config.getName()));
+		}
+	}
+
+	public static int purge() {
+		final File[] directories = YmirWorldFiles.getContainer().listFiles(File::isDirectory);
+		if (directories == null) {
+			return 0;
+		}
+
+		int purged = 0;
+		for (final File directory : directories) {
+			if (directory.getName().startsWith(YmirWorldFiles.TRASH_PREFIX)) {
+				new Thread(() -> YmirWorldFiles.delete(directory), "Ymir/Cleanup-" + directory.getName()).start();
+				continue;
+			}
+
+			if (!new File(directory, YmirWorldFiles.TEMPORARY).isFile() || Ymir.get(directory.getName()).filter(YmirWorld::isLoaded).isPresent()) {
+				continue;
+			}
+
+			if (YmirWorldFiles.discard(YmirWorldConfig.create(directory.getName()).worldGuard(true))) {
+				purged++;
+			}
+		}
+		return purged;
 	}
 
 	public static void copy(final File source, final File target) {
@@ -196,6 +227,15 @@ public final class YmirWorldFiles {
 		}
 
 		return directories;
+	}
+
+	private static void mark(final File directory) {
+		try {
+			directory.mkdirs();
+			new File(directory, YmirWorldFiles.TEMPORARY).createNewFile();
+		} catch (final IOException e) {
+			throw new YmirWorldException("Unable to mark the world " + directory.getName() + " as temporary", e);
+		}
 	}
 
 	private static void delete(final File directory) {

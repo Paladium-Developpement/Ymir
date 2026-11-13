@@ -31,7 +31,7 @@ Créer un monde à chaud, c'est trois lignes. Le faire sans rien casser, beaucou
 - **Suppression sans course.** Le dossier est renommé dans une corbeille avant d'être effacé en arrière-plan : on peut recréer un monde du même nom immédiatement.
 - **Un vide vraiment vide.** Le type `VOID` est un vrai type de monde Forge, pas un générateur Bukkit — ce dernier est ignoré dès qu'un mod fournit le provider du monde. Les chunks sont marqués décorés, donc aucun mod ne vient y semer de minerai.
 - **Déchargement automatique** des mondes inactifs, et rien à faire à l'arrêt du serveur.
-- **Aussi sans Bukkit.** Sur un serveur Forge seul, comme l'environnement de développement, Ymir crée, charge et téléporte lui-même, avec la même API et les mêmes dossiers sur le disque. Comme sous Bukkit, un monde ne se décharge jamais de lui-même : seul `unloadAfter` ou un appel à `unload` le décharge.
+- **Aussi sans Bukkit.** Sur un serveur Forge seul, comme l'environnement de développement, Ymir crée, charge et téléporte lui-même, avec la même API et les mêmes dossiers sur le disque. Comme sous Bukkit, un monde ne se décharge jamais de lui-même : seul `unloadAfter`, `deleteAfter` ou un appel à `unload` le décharge.
 
 ## Utilisation
 
@@ -90,6 +90,27 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
 
 `createAsync` copie le modèle hors du thread serveur, puis crée le monde sur le thread serveur.
 
+### Mondes jetables
+
+```java
+Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
+    .template(new File(server, "templates/donjon"))
+    .temporary(true)
+    .deleteAfter(Duration.ofSeconds(30))
+    .preload(3))
+    .thenAccept(donjon -> donjon.teleport(player));
+```
+
+Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
+
+### Précharger
+
+```java
+world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x, y, z, yaw, pitch));
+```
+
+Les chunks demandés se chargent quelques-uns par tick, depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur.
+
 ### Suivre le cycle de vie
 
 ```java
@@ -111,10 +132,15 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `seed` | aléatoire | graine, numérique ou textuelle |
 | `structures` | `true` | génération des structures |
 | `environment` | `NORMAL` | `NORMAL`, `NETHER` ou `THE_END` |
-| `spawn` | selon le type | point d'apparition imposé, sans la recherche vanilla |
+| `spawn` | selon le type | point d'apparition imposé, sans la recherche vanilla (aussi évitée pour `VOID` et `FLAT`) |
 | `platform` | aucune | plateforme carrée de ce rayon sous le spawn, utile pour un monde vide |
 | `gamerule` | aucune | gamerules appliquées à chaque chargement |
 | `unloadAfter` | jamais | déchargement après ce temps sans joueur |
+| `deleteAfter` | jamais | suppression après ce temps sans joueur |
+| `temporary` | `false` | monde jetable : jamais sauvegardé, supprimé au démarrage s'il est resté sur le disque |
+| `preload` | aucun | rayon de chunks chargés autour du spawn avant que `createAsync` rende le monde |
+| `time` | cycle normal | heure figée, réappliquée à chaque chargement |
+| `weather` | `true` | `false` garde un temps clair |
 | `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) |
 | `autoSave` | `true` | sauvegarde automatique |
 | `template` | aucun | dossier copié au lieu de générer le monde |
