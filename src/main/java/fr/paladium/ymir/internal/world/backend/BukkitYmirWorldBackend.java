@@ -8,7 +8,6 @@ import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
-import fr.paladium.ymir.internal.world.YmirWorldGuard;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
@@ -41,10 +40,6 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 
 		bukkitWorld.setKeepSpawnInMemory(world.getConfig().isKeepSpawnInMemory());
 		bukkitWorld.setAutoSave(world.getConfig().isAutoSave());
-
-		if (world.getConfig().isWorldGuard()) {
-			YmirWorldGuard.load(bukkitWorld);
-		}
 
 		return handle;
 	}

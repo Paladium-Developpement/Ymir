@@ -3,7 +3,6 @@ package fr.paladium.ymir.internal.world;
 import java.io.File;
 
 import org.apache.commons.io.FileUtils;
-import org.bukkit.World;
 
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin;
 
@@ -42,14 +41,6 @@ public final class YmirWorldGuard {
 		} catch (final Exception e) {
 			System.err.println("[Ymir] Failed to copy the WorldGuard configuration of " + name + ".");
 			e.printStackTrace();
-		}
-	}
-
-	public static void load(final World world) {
-		try {
-			WorldGuardPlugin.inst().getRegionContainer().get(world).load();
-		} catch (final NoClassDefFoundError | Exception e) {
-			System.err.println("[Ymir] Failed to load the WorldGuard regions of " + world.getName() + ".");
 		}
 	}
 

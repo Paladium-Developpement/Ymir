@@ -92,9 +92,6 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 
 		final WorldServer handle = world.getHandle();
 		MinecraftForge.EVENT_BUS.post(new WorldEvent.Unload(handle));
-		if (save || !handle.levelSaving) {
-			handle.flush();
-		}
 		DimensionManager.setWorld(handle.provider.dimensionId, null);
 		return true;
 	}
