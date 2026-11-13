@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.repository.default_branch }}
     - name: Set up Git
       run: |
         git config user.name "${{ github.actor }}"
@@ -19,8 +21,8 @@ jobs:
     - name: Get the tag name
       id: set-tag
       run: |
-        TAG_NAME=$(git describe --tags --abbrev=0)
-        TAG_NAME=${TAG_NAME:1}
+        TAG_NAME=${{ github.event.release.tag_name }}
+        TAG_NAME=${TAG_NAME#v}
         echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
 
         COMMIT_SHA=$(git rev-parse HEAD)
@@ -28,9 +30,14 @@ jobs:
         echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
     - name: Update version in files
       run: |
+        sed -i "s/^version = \".*\"/version = \"${TAG_NAME}\"/" build.gradle
         sed -i "s/project.version = \".*\"/project.version = \"${TAG_NAME}\"/g" build.gradle
         sed -i "s/version-\([^[:space:]-]*\) \([^[:space:]-]*\)-/version-${TAG_NAME} (${COMMIT_SHA})-/g" README.md
         git add README.md
         git add build.gradle
-        git commit -m "update: update version to ${TAG_NAME} (:bookmark:)"
-        git push origin HEAD:main
+        if git diff --cached --quiet; then
+          echo "Version already up to date"
+          exit 0
+        fi
+        git commit -m "update: version ${TAG_NAME} (🔖)"
+        git push origin HEAD:${{ github.event.repository.default_branch }}
