@@ -111,6 +111,26 @@ world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x,
 
 Les chunks demandés se chargent quelques-uns par tick, depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur.
 
+### Lire une carte source
+
+```java
+Ymir.createAsync(YmirWorldConfig.create("terres-" + id)
+    .source(YmirWorldSource.create(new File(server, "maps/terres"))
+        .offset(120, -45)
+        .rotation(YmirWorldRotation.random(random))
+        .bounds(-312, -312, 311, 311))
+    .deleteAfter(Duration.ofSeconds(10)))
+    .thenAccept(terres -> terres.teleport(player));
+```
+
+Un monde source démarre vide et lit chaque chunk à la demande dans une carte déjà générée, ouverte en lecture seule et partagée par tous les mondes qui l'utilisent : rien n'est copié, une carte de plusieurs gigaoctets sert des centaines de mondes. Le chunk lu est décalé de `offset` chunks, tourné de `rotation` (un quart de tour vers la droite à chaque cran) avec ses blocs orientés, ses biomes, ses entités et ses blocs-entités, puis il vit comme un chunk normal : il est sauvegardé dans le monde et relu depuis le disque ensuite. Hors de `bounds` (en chunks, dans les coordonnées du monde) le monde reste vide. Le monde n'est ni peuplé ni décoré par les mods, et il fonctionne pour tous les environnements, Nether compris.
+
+L'orientation des blocs vanilla est fournie (troncs, escaliers, lianes, torches, coffres, portes…). Un mod enregistre celle de ses blocs :
+
+```java
+YmirBlockRotationRegistry.inst().register((metadata, rotation) -> metadata + rotation.getQuarters() & 3, MyBlocks.STATUE);
+```
+
 ### Suivre le cycle de vie
 
 ```java
@@ -132,7 +152,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `seed` | aléatoire | graine, numérique ou textuelle |
 | `structures` | `true` | génération des structures |
 | `environment` | `NORMAL` | `NORMAL`, `NETHER` ou `THE_END` |
-| `spawn` | selon le type | point d'apparition imposé, sans la recherche vanilla (aussi évitée pour `VOID` et `FLAT`) |
+| `spawn` | selon le type | point d'apparition imposé, sans la recherche vanilla (aussi évitée pour `VOID`, `FLAT` et une `source`) |
 | `platform` | aucune | plateforme carrée de ce rayon sous le spawn, utile pour un monde vide |
 | `gamerule` | aucune | gamerules appliquées à chaque chargement |
 | `unloadAfter` | jamais | déchargement après ce temps sans joueur |
@@ -144,6 +164,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) |
 | `autoSave` | `true` | sauvegarde automatique |
 | `template` | aucun | dossier copié au lieu de générer le monde |
+| `source` | aucune | carte lue à la demande, décalée, tournée et bornée, au lieu de générer le monde |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |
 | `worldGuard` | `false` | copie la configuration WorldGuard du monde principal et charge les régions du nouveau monde |
 | `chat` | aucun | chat propre au monde et accès aux chats serveur et global, appliqués par PalaChats |

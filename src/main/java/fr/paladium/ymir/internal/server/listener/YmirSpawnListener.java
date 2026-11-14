@@ -34,6 +34,10 @@ public class YmirSpawnListener {
 			return config.getSpawn();
 		}
 
+		if (config.getSource() != null) {
+			return new ChunkCoordinates(0, ground, 0);
+		}
+
 		if (config.getType().isVoid()) {
 			return new ChunkCoordinates(0, YmirVoidWorldType.SPAWN_HEIGHT + 1, 0);
 		}

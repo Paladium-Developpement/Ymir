@@ -6,11 +6,13 @@ import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import fr.paladium.ymir.internal.common.CommonProxy;
 import fr.paladium.ymir.internal.server.listener.YmirConnectionListener;
 import fr.paladium.ymir.internal.server.listener.YmirPlayerListener;
+import fr.paladium.ymir.internal.server.listener.YmirSourceListener;
 import fr.paladium.ymir.internal.server.listener.YmirSpawnListener;
 import fr.paladium.ymir.internal.server.listener.YmirTickListener;
 import fr.paladium.ymir.internal.server.task.YmirUnloadTask;
 import fr.paladium.ymir.internal.world.YmirVoidWorldType;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
+import fr.paladium.ymir.internal.world.source.YmirSourceRegionCache;
 import fr.paladium.ymir.lib.Ymir;
 
 public class ServerProxy extends CommonProxy {
@@ -20,6 +22,7 @@ public class ServerProxy extends CommonProxy {
 		super.onPreInit(event);
 		YmirVoidWorldType.register();
 		super.addListener(YmirSpawnListener.class);
+		super.addListener(YmirSourceListener.class);
 		super.addListener(YmirConnectionListener.class);
 		super.addListener(YmirPlayerListener.class);
 		super.addListener(YmirTickListener.class);
@@ -39,6 +42,7 @@ public class ServerProxy extends CommonProxy {
 	public void onServerStopping(final FMLServerStoppingEvent event) {
 		super.onServerStopping(event);
 		Ymir.unloadAll();
+		YmirSourceRegionCache.inst().close();
 	}
 
 }

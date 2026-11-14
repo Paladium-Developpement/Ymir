@@ -42,6 +42,7 @@ public class YmirWorldConfig {
 	private Duration         unloadAfter;
 	private Duration         deleteAfter;
 	private ChunkCoordinates spawn;
+	private YmirWorldSource  source;
 	private Block            platformBlock = Blocks.stone;
 	private Environment      environment = Environment.NORMAL;
 	private YmirWorldType    type = YmirWorldType.NORMAL;
@@ -68,6 +69,7 @@ public class YmirWorldConfig {
 		config.seed = this.seed;
 		config.type = this.type;
 		config.spawn = this.spawn;
+		config.source = this.source;
 		config.time = this.time;
 		config.preload = this.preload;
 		config.weather = this.weather;
@@ -150,6 +152,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C template(final @NonNull File template) {
 		this.template = template;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C source(final @NonNull YmirWorldSource source) {
+		this.source = source;
 		return (C) this;
 	}
 
