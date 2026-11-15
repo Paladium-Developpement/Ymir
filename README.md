@@ -5,7 +5,7 @@
 # Ymir
 
 <div align="center" >
-  <img align="center" src="https://img.shields.io/badge/version-1.4.0 (fbd0bbe)-blue">
+  <img align="center" src="https://img.shields.io/badge/version-1.4.0 (0a5cccf)-blue">
   <img align="center" src="https://img.shields.io/badge/minecraft-forge 1.7.10-blue">
   <img align="center" src="https://img.shields.io/badge/maintainer-Zeldown-orange">
   <img align="center" src="https://img.shields.io/maintenance/yes/9999">
