@@ -121,12 +121,29 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 			chunk.setBiomeArray(source.getBiomes());
 		}
 
-		chunk.generateHeightMap();
+		this.heightMap(chunk);
 		chunk.isTerrainPopulated = true;
 		chunk.isLightPopulated = source.isLightPopulated();
 		this.entities(chunk, source.getEntities());
 		this.tileEntities(chunk, source.getTileEntities());
 		return chunk;
+	}
+
+	private void heightMap(final Chunk chunk) {
+		final int top = chunk.getTopFilledSegment() + 15;
+		int lowest = Integer.MAX_VALUE;
+		for (int x = 0; x < 16; x++) {
+			for (int z = 0; z < 16; z++) {
+				int y = top;
+				while (y > 0 && chunk.func_150808_b(x, y - 1, z) == 0) {
+					y--;
+				}
+
+				chunk.heightMap[z << 4 | x] = y;
+				lowest = Math.min(lowest, y);
+			}
+		}
+		chunk.heightMapMinimum = lowest;
 	}
 
 	private void entities(final Chunk chunk, final NBTTagList entities) {
