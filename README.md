@@ -28,7 +28,7 @@ Créer un monde à chaud, c'est trois lignes. Le faire sans rien casser, beaucou
 - **Plus de monde fantôme.** Une dimension déchargée est désinscrite. Sans ça, un joueur qui se reconnecte force le serveur à recréer sa dimension par le chemin vanilla, dans un dossier `DIM<id>` parallèle au vôtre, qui reste chargé et sauvegardé à vie.
 - **Plus de conflit d'identifiants.** L'identifiant de dimension est relâché à chaque chargement, donc deux mondes ne peuvent jamais revendiquer le même numéro, quoi qu'il arrive au redémarrage.
 - **Fichiers réellement relâchés.** Les fichiers de région restent ouverts après un déchargement : la suppression échoue sur NFS et un monde recréé au même endroit ressert les anciens chunks. Ymir vide la file d'écriture puis ferme et retire du cache les fichiers du monde.
-- **Suppression sans course.** Le dossier est renommé dans une corbeille avant d'être effacé en arrière-plan : on peut recréer un monde du même nom immédiatement.
+- **Suppression sans gel ni course.** Tout le travail sur le disque se fait en arrière-plan : vider la file d'écriture, fermer les fichiers de région, renommer le dossier dans une corbeille puis l'effacer. On peut recréer un monde du même nom immédiatement : sa préparation attend que l'ancien dossier ait quitté la place.
 - **Un vide vraiment vide.** Le type `VOID` est un vrai type de monde Forge, pas un générateur Bukkit — ce dernier est ignoré dès qu'un mod fournit le provider du monde. Les chunks sont marqués décorés, donc aucun mod ne vient y semer de minerai.
 - **Déchargement automatique** des mondes inactifs, et rien à faire à l'arrêt du serveur.
 - **Aussi sans Bukkit.** Sur un serveur Forge seul, comme l'environnement de développement, Ymir crée, charge et téléporte lui-même, avec la même API et les mêmes dossiers sur le disque. Comme sous Bukkit, un monde ne se décharge jamais de lui-même : seul `unloadAfter`, `deleteAfter` ou un appel à `unload` le décharge.
@@ -88,7 +88,7 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
     .thenAccept(donjon -> donjon.teleport(player));
 ```
 
-`createAsync` copie le modèle hors du thread serveur, puis crée le monde sur le thread serveur.
+`createAsync` copie le modèle hors du thread serveur, puis crée le monde sur le thread serveur, un monde par tick au plus : vingt joueurs qui arrivent ensemble étalent leurs créations sur vingt ticks au lieu de geler le serveur pendant un seul.
 
 ### Mondes jetables
 
@@ -109,7 +109,7 @@ Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque aprè
 world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x, y, z, yaw, pitch));
 ```
 
-Les chunks demandés se chargent quelques-uns par tick, depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur.
+Les chunks demandés se chargent quelques-uns par tick, avec un budget de temps partagé par tous les mondes, depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
 
 ### Lire une carte source
 
@@ -124,6 +124,16 @@ Ymir.createAsync(YmirWorldConfig.create("terres-" + id)
 ```
 
 Un monde source démarre vide et lit chaque chunk à la demande dans une carte déjà générée, ouverte en lecture seule et partagée par tous les mondes qui l'utilisent : rien n'est copié, une carte de plusieurs gigaoctets sert des centaines de mondes. Le chunk lu est décalé de `offset` chunks, tourné de `rotation` (un quart de tour vers la droite à chaque cran) avec ses blocs orientés, ses biomes, ses entités et ses blocs-entités, puis il vit comme un chunk normal : il est sauvegardé dans le monde et relu depuis le disque ensuite. Hors de `bounds` (en chunks, dans les coordonnées du monde) le monde reste vide. Le monde n'est ni peuplé ni décoré par les mods, et il fonctionne pour tous les environnements, Nether compris.
+
+La carte doit être carrée et centrée sur 0, 0, sinon des chunks manquent dans le monde. Placez-la sur un disque local rapide : chaque chunk est lu au hasard dans la carte. Un chunk demandé par `preload` est préparé en arrière-plan, et sur le thread serveur il ne reste qu'à poser ses tableaux de blocs, ses entités et ses blocs-entités.
+
+Pour choisir un point d'apparition sans charger le monde, lisez directement la carte, déjà décalée et tournée :
+
+```java
+source.read(chunkX, chunkZ).thenAccept(chunk -> chunk.ifPresent(storages -> storages[y >> 4].getBlockByExtId(x & 15, y & 15, z & 15)));
+```
+
+La suite de `read` s'exécute hors du thread serveur : lisez les blocs, ne touchez pas au jeu.
 
 L'orientation des blocs vanilla est fournie (troncs, escaliers, lianes, torches, coffres, portes…). Un mod enregistre celle de ses blocs :
 
@@ -161,7 +171,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `preload` | aucun | rayon de chunks chargés autour du spawn avant que `createAsync` rende le monde |
 | `time` | cycle normal | heure figée, réappliquée à chaque chargement |
 | `weather` | `true` | `false` garde un temps clair |
-| `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) |
+| `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) ; à `false`, Bukkit ne prépare pas la zone du spawn à la création |
 | `autoSave` | `true` | sauvegarde automatique |
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `source` | aucune | carte lue à la demande, décalée, tournée et bornée, au lieu de générer le monde |

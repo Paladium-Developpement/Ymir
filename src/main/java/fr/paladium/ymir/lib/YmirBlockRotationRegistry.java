@@ -13,6 +13,8 @@ public final class YmirBlockRotationRegistry {
 
 	private final Map<Block, YmirBlockRotation> rotations = new IdentityHashMap<>();
 
+	private volatile byte[][] table;
+
 	private YmirBlockRotationRegistry() {
 		final YmirBlockRotation axis = this.quarter((metadata, quarter) -> (metadata & 12) == 4 ? metadata & 3 | 8 : (metadata & 12) == 8 ? metadata & 3 | 4 : metadata);
 		final YmirBlockRotation horizontal = this.quarter((metadata, quarter) -> metadata & ~3 | metadata + 1 & 3);
@@ -47,12 +49,47 @@ public final class YmirBlockRotationRegistry {
 		for (final Block block : blocks) {
 			this.rotations.put(block, rotation);
 		}
+		this.table = null;
 		return this;
+	}
+
+	public int rotate(final int id, final int metadata, final @NonNull YmirWorldRotation rotation) {
+		return rotation == YmirWorldRotation.NONE ? metadata : this.table()[rotation.getQuarters()][id << 4 | metadata & 15];
 	}
 
 	public int rotate(final @NonNull Block block, final int metadata, final @NonNull YmirWorldRotation rotation) {
 		final YmirBlockRotation found = this.rotations.get(block);
 		return found == null || rotation == YmirWorldRotation.NONE ? metadata : found.rotate(metadata, rotation) & 15;
+	}
+
+	private byte[][] table() {
+		final byte[][] cached = this.table;
+		if (cached != null) {
+			return cached;
+		}
+
+		final byte[][] rotated = new byte[4][65536];
+		for (final YmirWorldRotation rotation : YmirWorldRotation.values()) {
+			for (int index = 0; index < 65536; index++) {
+				rotated[rotation.getQuarters()][index] = (byte) (index & 15);
+			}
+		}
+
+		for (final Map.Entry<Block, YmirBlockRotation> entry : this.rotations.entrySet()) {
+			final int id = Block.getIdFromBlock(entry.getKey());
+			if (id < 0 || id > 4095) {
+				continue;
+			}
+
+			for (final YmirWorldRotation rotation : YmirWorldRotation.values()) {
+				for (int metadata = 0; metadata < 16; metadata++) {
+					rotated[rotation.getQuarters()][id << 4 | metadata] = (byte) this.rotate(entry.getKey(), metadata, rotation);
+				}
+			}
+		}
+
+		this.table = rotated;
+		return rotated;
 	}
 
 	private YmirBlockRotation quarter(final YmirBlockRotation step) {

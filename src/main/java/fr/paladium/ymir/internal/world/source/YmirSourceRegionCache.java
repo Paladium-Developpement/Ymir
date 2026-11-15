@@ -1,22 +1,15 @@
 package fr.paladium.ymir.internal.world.source;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
+import java.nio.channels.ClosedChannelException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.InflaterInputStream;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -24,34 +17,16 @@ public final class YmirSourceRegionCache {
 
 	private static final YmirSourceRegionCache INSTANCE = new YmirSourceRegionCache();
 
-	private final Map<File, RandomAccessFile> files = new LinkedHashMap<>(16, 0.75F, true);
+	private final Map<File, YmirSourceRegion> regions = new LinkedHashMap<>(16, 0.75F, true);
 
 	public static YmirSourceRegionCache inst() {
 		return YmirSourceRegionCache.INSTANCE;
 	}
 
-	public synchronized Optional<NBTTagCompound> read(final File directory, final int chunkX, final int chunkZ) {
+	public Optional<NBTTagCompound> read(final File directory, final int chunkX, final int chunkZ) {
 		final File file = new File(new File(directory, "region"), "r." + (chunkX >> 5) + "." + (chunkZ >> 5) + ".mca");
-		if (!file.isFile()) {
-			return Optional.empty();
-		}
-
 		try {
-			final RandomAccessFile region = this.open(file);
-			region.seek(4L * ((chunkX & 31) + (chunkZ & 31) * 32));
-			final int location = region.readInt();
-			if (location == 0) {
-				return Optional.empty();
-			}
-
-			region.seek((location >> 8) * 4096L);
-			final int length = region.readInt();
-			final byte compression = region.readByte();
-			final byte[] data = new byte[length - 1];
-			region.readFully(data);
-			try (final DataInputStream stream = new DataInputStream(new BufferedInputStream(this.decompress(compression, data)))) {
-				return Optional.of(CompressedStreamTools.read(stream));
-			}
+			return this.read(file, chunkX, chunkZ, true);
 		} catch (final IOException e) {
 			System.err.println("[Ymir] Unable to read the source chunk " + chunkX + ", " + chunkZ + " of " + directory + ": " + e.getMessage());
 			return Optional.empty();
@@ -59,32 +34,53 @@ public final class YmirSourceRegionCache {
 	}
 
 	public synchronized YmirSourceRegionCache close() {
-		this.files.values().forEach(this::close);
-		this.files.clear();
+		this.regions.values().forEach(this::close);
+		this.regions.clear();
 		return this;
 	}
 
-	private RandomAccessFile open(final File file) throws IOException {
-		final RandomAccessFile cached = this.files.get(file);
-		if (cached != null) {
-			return cached;
+	private Optional<NBTTagCompound> read(final File file, final int chunkX, final int chunkZ, final boolean retry) throws IOException {
+		final Optional<YmirSourceRegion> region = this.open(file);
+		if (!region.isPresent()) {
+			return Optional.empty();
 		}
 
-		final RandomAccessFile region = new RandomAccessFile(file, "r");
-		this.files.put(file, region);
-		final Iterator<RandomAccessFile> iterator = this.files.values().iterator();
-		while (this.files.size() > 64 && iterator.hasNext()) {
+		try {
+			return region.get().read(chunkX, chunkZ);
+		} catch (final ClosedChannelException e) {
+			this.evict(file, region.get());
+			if (!retry) {
+				throw e;
+			}
+			return this.read(file, chunkX, chunkZ, false);
+		}
+	}
+
+	private synchronized Optional<YmirSourceRegion> open(final File file) throws IOException {
+		final YmirSourceRegion cached = this.regions.get(file);
+		if (cached != null) {
+			return Optional.of(cached);
+		}
+
+		if (!file.isFile()) {
+			return Optional.empty();
+		}
+
+		final YmirSourceRegion region = new YmirSourceRegion(file);
+		this.regions.put(file, region);
+		final Iterator<YmirSourceRegion> iterator = this.regions.values().iterator();
+		while (this.regions.size() > 256 && iterator.hasNext()) {
 			this.close(iterator.next());
 			iterator.remove();
 		}
-		return region;
+		return Optional.of(region);
 	}
 
-	private InputStream decompress(final byte compression, final byte[] data) throws IOException {
-		return compression == 1 ? new GZIPInputStream(new ByteArrayInputStream(data)) : new InflaterInputStream(new ByteArrayInputStream(data));
+	private synchronized void evict(final File file, final YmirSourceRegion region) {
+		this.regions.remove(file, region);
 	}
 
-	private void close(final RandomAccessFile region) {
+	private void close(final YmirSourceRegion region) {
 		try {
 			region.close();
 		} catch (final IOException e) {

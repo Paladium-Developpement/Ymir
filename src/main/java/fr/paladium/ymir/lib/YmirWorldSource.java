@@ -1,11 +1,16 @@
 package fr.paladium.ymir.lib;
 
 import java.io.File;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
+import fr.paladium.ymir.internal.world.source.YmirSourceChunk;
+import fr.paladium.ymir.internal.world.source.YmirSourceReader;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 @Getter
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
@@ -50,6 +55,10 @@ public final class YmirWorldSource {
 
 	public boolean contains(final int chunkX, final int chunkZ) {
 		return chunkX >= this.minChunkX && chunkX <= this.maxChunkX && chunkZ >= this.minChunkZ && chunkZ <= this.maxChunkZ;
+	}
+
+	public @NonNull CompletableFuture<Optional<ExtendedBlockStorage[]>> read(final int chunkX, final int chunkZ) {
+		return YmirSourceReader.inst().readAsync(this, chunkX, chunkZ, true).thenApply(chunk -> chunk.map(YmirSourceChunk::getStorages));
 	}
 
 	public int getSourceChunkX(final int chunkX, final int chunkZ) {
