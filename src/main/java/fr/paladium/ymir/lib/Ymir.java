@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import fr.paladium.palaforgeutils.lib.scheduler.MinecraftThread;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
+import fr.paladium.ymir.internal.world.YmirWorldLoads;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -53,7 +54,7 @@ public final class Ymir {
 
 	public static @NonNull CompletableFuture<YmirWorld> createAsync(final @NonNull YmirWorldConfig config) {
 		final YmirWorld world = Ymir.of(config);
-		return CompletableFuture.supplyAsync(world::prepare).thenApplyAsync(YmirWorld::load, MinecraftThread::execute).thenCompose(YmirWorld::preloadSpawn);
+		return CompletableFuture.supplyAsync(world::prepare).thenApplyAsync(YmirWorld::load, YmirWorldLoads::execute).thenCompose(YmirWorld::preloadSpawn);
 	}
 
 	public static void delete(final @NonNull YmirWorldConfig config) {
@@ -77,7 +78,7 @@ public final class Ymir {
 			YmirWorldFiles.reset(to, target);
 			YmirWorldFiles.copyLinked(source, source.getName(), target.getName());
 			return target;
-		}).whenCompleteAsync((config, error) -> loaded.ifPresent(handle -> handle.levelSaving = levelSaving), MinecraftThread::execute).thenApplyAsync(Ymir::create, MinecraftThread::execute);
+		}).whenCompleteAsync((config, error) -> loaded.ifPresent(handle -> handle.levelSaving = levelSaving), MinecraftThread::execute).thenApplyAsync(Ymir::create, YmirWorldLoads::execute);
 	}
 
 	public static void unloadAll() {
