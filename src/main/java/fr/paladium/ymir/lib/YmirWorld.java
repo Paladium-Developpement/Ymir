@@ -137,6 +137,10 @@ public final class YmirWorld {
 	}
 
 	public boolean unload(final boolean save) {
+		return this.unload(save, true);
+	}
+
+	private boolean unload(final boolean save, final boolean release) {
 		if (!this.isLoaded()) {
 			return true;
 		}
@@ -156,22 +160,22 @@ public final class YmirWorld {
 		this.handle = null;
 		Ymir.detach(dimensionId, this);
 
-		YmirWorldFiles.release(this.getDirectory(), written);
+		if (release) {
+			YmirWorldFiles.release(this.getDirectory(), written);
+		}
 		YmirWorldDimensions.unregister(dimensionId);
 		return true;
 	}
 
 	public void delete() {
-		if (!this.unload(false)) {
+		if (!this.unload(false, false)) {
 			throw new YmirWorldException("The world " + this.getName() + " still contains players");
 		}
 
 		MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Delete(this));
 		Ymir.forget(this);
 
-		if (!YmirWorldFiles.discard(this.config)) {
-			throw new YmirWorldException("Unable to move the files of the world " + this.getName());
-		}
+		YmirWorldFiles.discard(this.config);
 	}
 
 	public @NonNull CompletableFuture<YmirWorld> copy(final @NonNull String name) {
@@ -229,6 +233,7 @@ public final class YmirWorld {
 
 	@NonNull YmirWorld prepare() {
 		if (!this.prepared) {
+			YmirWorldFiles.await(this.getName());
 			this.fresh = !Ymir.exists(this.getName());
 			YmirWorldFiles.prepare(this.config);
 			YmirWorldFiles.reset(this.getDirectory(), this.config);

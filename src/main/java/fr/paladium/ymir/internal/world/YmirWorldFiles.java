@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
@@ -40,6 +42,8 @@ public final class YmirWorldFiles {
 	private static final String[] CACHE_FIELDS = { "REGIONS_BY_FILE", "field_76553_a", "regionsByFilename" };
 	private static final String[] COPY_EXCLUDES = { "session.lock", "uid.dat", "playerdata", "stats", "advancements", ".ymir-temporary" };
 
+	private static final Map<String, CompletableFuture<Void>> DISCARDS = new ConcurrentHashMap<>();
+
 	public static File getContainer() {
 		final WorldServer overworld = DimensionManager.getWorld(0);
 		if (overworld == null) {
@@ -61,7 +65,7 @@ public final class YmirWorldFiles {
 	}
 
 	public static boolean exists(final String name) {
-		return new File(YmirWorldFiles.getDirectory(name), YmirWorldFiles.LEVEL).exists();
+		return !YmirWorldFiles.DISCARDS.containsKey(name) && new File(YmirWorldFiles.getDirectory(name), YmirWorldFiles.LEVEL).exists();
 	}
 
 	public static void flush() {
@@ -69,6 +73,13 @@ public final class YmirWorldFiles {
 			ThreadedFileIOBase.threadedIOInstance.waitForFinish();
 		} catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
+		}
+	}
+
+	public static void await(final String name) {
+		final CompletableFuture<Void> discard = YmirWorldFiles.DISCARDS.get(name);
+		if (discard != null) {
+			discard.join();
 		}
 	}
 
@@ -103,9 +114,8 @@ public final class YmirWorldFiles {
 				continue;
 			}
 
-			if (YmirWorldFiles.discard(YmirWorldConfig.create(directory.getName()).worldGuard(true))) {
-				purged++;
-			}
+			YmirWorldFiles.discard(YmirWorldConfig.create(directory.getName()).worldGuard(true));
+			purged++;
 		}
 		return purged;
 	}
@@ -164,45 +174,32 @@ public final class YmirWorldFiles {
 			YmirWorldFiles.flush();
 		}
 
-		final Map<File, RegionFile> regions = YmirWorldFiles.regions();
-		if (regions == null) {
-			return;
-		}
-
-		final Path root = directory.toPath().toAbsolutePath().normalize();
-		synchronized (RegionFileCache.class) {
-			final Iterator<Map.Entry<File, RegionFile>> iterator = regions.entrySet().iterator();
-			while (iterator.hasNext()) {
-				final Map.Entry<File, RegionFile> entry = iterator.next();
-				if (!entry.getKey().toPath().toAbsolutePath().normalize().startsWith(root)) {
-					continue;
-				}
-
-				try {
-					entry.getValue().close();
-				} catch (final IOException e) {
-					System.err.println("[Ymir] Failed to close the region file " + entry.getKey().getAbsolutePath() + ".");
-					e.printStackTrace();
-				}
-				iterator.remove();
-			}
-		}
+		YmirWorldFiles.close(directory);
 	}
 
-	public static boolean discard(final YmirWorldConfig config) {
+	public static void discard(final YmirWorldConfig config) {
 		final List<File> directories = YmirWorldFiles.linked(config, config.getName());
 		final File directory = YmirWorldFiles.getDirectory(config.getName());
-		if (directory.exists()) {
-			final File trash = new File(directory.getParentFile(), YmirWorldFiles.TRASH_PREFIX + config.getName() + "-" + System.currentTimeMillis());
-			if (!directory.renameTo(trash)) {
-				System.err.println("[Ymir] Failed to move the world directory " + directory.getAbsolutePath() + " to " + trash.getName() + ".");
-				return false;
+		final CompletableFuture<Void> discard = new CompletableFuture<>();
+		final CompletableFuture<Void> previous = YmirWorldFiles.DISCARDS.put(config.getName(), discard);
+		new Thread(() -> {
+			if (previous != null) {
+				previous.join();
 			}
-			directories.add(trash);
-		}
 
-		new Thread(() -> directories.forEach(YmirWorldFiles::delete), "Ymir/Cleanup-" + config.getName()).start();
-		return true;
+			final File trash = new File(directory.getParentFile(), YmirWorldFiles.TRASH_PREFIX + config.getName() + "-" + System.currentTimeMillis());
+			try {
+				YmirWorldFiles.release(directory, true);
+				if (directory.exists() && !directory.renameTo(trash)) {
+					System.err.println("[Ymir] Failed to move the world directory " + directory.getAbsolutePath() + " to " + trash.getName() + ".");
+				}
+				directories.forEach(YmirWorldFiles::delete);
+			} finally {
+				YmirWorldFiles.DISCARDS.remove(config.getName(), discard);
+				discard.complete(null);
+			}
+			YmirWorldFiles.delete(trash);
+		}, "Ymir/Cleanup-" + config.getName()).start();
 	}
 
 	public static void copyLinked(final YmirWorldConfig config, final String source, final String target) {
@@ -232,6 +229,32 @@ public final class YmirWorldFiles {
 		}
 
 		return directories;
+	}
+
+	private static void close(final File directory) {
+		final Map<File, RegionFile> regions = YmirWorldFiles.regions();
+		if (regions == null) {
+			return;
+		}
+
+		final Path root = directory.toPath().toAbsolutePath().normalize();
+		synchronized (RegionFileCache.class) {
+			final Iterator<Map.Entry<File, RegionFile>> iterator = regions.entrySet().iterator();
+			while (iterator.hasNext()) {
+				final Map.Entry<File, RegionFile> entry = iterator.next();
+				if (!entry.getKey().toPath().toAbsolutePath().normalize().startsWith(root)) {
+					continue;
+				}
+
+				try {
+					entry.getValue().close();
+				} catch (final IOException e) {
+					System.err.println("[Ymir] Failed to close the region file " + entry.getKey().getAbsolutePath() + ".");
+					e.printStackTrace();
+				}
+				iterator.remove();
+			}
+		}
 	}
 
 	private static void mark(final File directory) {
