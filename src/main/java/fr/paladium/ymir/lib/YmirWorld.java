@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkCoordIntPair;
@@ -85,8 +86,9 @@ public final class YmirWorld {
 			return players;
 		}
 
-		for (final Object entity : this.handle.playerEntities) {
-			if (entity instanceof EntityPlayerMP) {
+		final int dimensionId = this.getDimensionId();
+		for (final Object entity : MinecraftServer.getServer().getConfigurationManager().playerEntityList) {
+			if (entity instanceof EntityPlayerMP && ((EntityPlayerMP) entity).dimension == dimensionId) {
 				players.add((EntityPlayerMP) entity);
 			}
 		}
