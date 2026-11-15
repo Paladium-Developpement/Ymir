@@ -160,6 +160,8 @@ public final class YmirWorldFiles {
 			}
 			data.removeTag("Player");
 			root.setTag("Data", data);
+			root.removeTag("FML");
+			root.removeTag("Forge");
 
 			try (final OutputStream output = new FileOutputStream(level)) {
 				CompressedStreamTools.writeCompressed(root, output);
