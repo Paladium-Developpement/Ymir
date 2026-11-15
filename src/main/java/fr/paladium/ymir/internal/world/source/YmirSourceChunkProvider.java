@@ -135,7 +135,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		for (int x = 0; x < 16; x++) {
 			for (int z = 0; z < 16; z++) {
 				int y = top;
-				while (y > 0 && chunk.func_150808_b(x, y - 1, z) == 0) {
+				while (y > 0 && chunk.getBlock(x, y - 1, z).getLightOpacity() == 0) {
 					y--;
 				}
 
