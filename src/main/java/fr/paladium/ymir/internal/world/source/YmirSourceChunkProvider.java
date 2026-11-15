@@ -27,7 +27,6 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 	private final WorldServer world;
 	private final YmirWorldSource source;
-	private final IChunkProvider fallback;
 	private final Map<Long, CompletableFuture<Optional<YmirSourceChunk>>> prefetched = new ConcurrentHashMap<>();
 
 	@Override
@@ -88,7 +87,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 	@Override
 	public List<?> getPossibleCreatures(final EnumCreatureType type, final int x, final int y, final int z) {
-		return this.fallback.getPossibleCreatures(type, x, y, z);
+		return this.world.getBiomeGenForCoords(x, z).getSpawnableList(type);
 	}
 
 	@Override

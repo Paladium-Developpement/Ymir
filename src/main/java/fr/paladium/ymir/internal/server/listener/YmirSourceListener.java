@@ -36,7 +36,7 @@ public class YmirSourceListener {
 		}
 
 		if (config.getSource() != null) {
-			world.theChunkProviderServer.currentChunkProvider = new YmirSourceChunkProvider(world, config.getSource(), world.theChunkProviderServer.currentChunkProvider);
+			world.theChunkProviderServer.currentChunkProvider = new YmirSourceChunkProvider(world, config.getSource());
 		}
 	}
 
