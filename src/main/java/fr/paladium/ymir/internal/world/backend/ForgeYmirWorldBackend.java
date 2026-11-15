@@ -2,6 +2,7 @@ package fr.paladium.ymir.internal.world.backend;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.World;
 import org.bukkit.World.Environment;
@@ -16,6 +17,7 @@ import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.YmirWorldTeleporter;
 import fr.paladium.ymir.internal.world.provider.YmirEndWorldProvider;
 import fr.paladium.ymir.internal.world.provider.YmirNetherWorldProvider;
+import fr.paladium.ymir.internal.world.provider.YmirSkylessWorldProvider;
 import fr.paladium.ymir.internal.world.provider.YmirSurfaceWorldProvider;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
@@ -41,6 +43,7 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 
 	private static final ForgeYmirWorldBackend INSTANCE = new ForgeYmirWorldBackend();
 
+	private final Map<Integer, Integer> sent = new ConcurrentHashMap<>();
 	private final Map<Environment, Integer> providers = new EnumMap<>(Environment.class);
 
 	private ForgeYmirWorldBackend() {
@@ -62,8 +65,8 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 		}
 
 		final MinecraftServer server = MinecraftServer.getServer();
-		final int dimensionId = DimensionManager.getNextFreeDimId();
-		DimensionManager.registerDimension(dimensionId, this.providers.get(config.getEnvironment()));
+		final int dimensionId = this.getFreeDimension(this.getClientProvider(config));
+		DimensionManager.registerDimension(dimensionId, config.isSky() ? this.providers.get(config.getEnvironment()) : YmirSkylessWorldProvider.getType());
 
 		try {
 			final WorldSettings settings = new WorldSettings(config.getSeed(), server.getGameType(), config.isStructures(), server.isHardcore(), type);
@@ -114,13 +117,13 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 	public void connect(final NetworkManager manager, final EntityPlayerMP player) {
 		final NetworkDispatcher dispatcher = NetworkDispatcher.get(manager);
 		for (final WorldServer handle : DimensionManager.getWorlds()) {
-			Ymir.get(handle).ifPresent(world -> this.sync(OutboundTarget.DISPATCHER, dispatcher, handle.provider.dimensionId, world.getConfig().getEnvironment()));
+			Ymir.get(handle).ifPresent(world -> this.sync(OutboundTarget.DISPATCHER, dispatcher, handle.provider.dimensionId, this.getClientProvider(world.getConfig())));
 		}
 
 		final NBTTagCompound data = player.mcServer.getConfigurationManager().getPlayerNBT(player);
 		final int dimensionId = data == null ? 0 : data.getInteger("Dimension");
 		if (!DimensionManager.isDimensionRegistered(dimensionId)) {
-			this.sync(OutboundTarget.DISPATCHER, dispatcher, dimensionId, Environment.NORMAL);
+			this.sync(OutboundTarget.DISPATCHER, dispatcher, dimensionId, 0);
 		}
 	}
 
@@ -143,7 +146,7 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 		final WorldServer handle = world.getHandle();
 		final int dimensionId = handle.provider.dimensionId;
 		if (player.dimension != dimensionId) {
-			this.sync(OutboundTarget.PLAYER, player, dimensionId, world.getConfig().getEnvironment());
+			this.sync(OutboundTarget.PLAYER, player, dimensionId, this.getClientProvider(world.getConfig()));
 			player.mcServer.getConfigurationManager().transferPlayerToDimension(player, dimensionId, new YmirWorldTeleporter(handle, x, y, z, yaw, pitch));
 		}
 
@@ -151,11 +154,27 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 		return true;
 	}
 
-	private void sync(final OutboundTarget target, final Object receiver, final int dimensionId, final Environment environment) {
+	private void sync(final OutboundTarget target, final Object receiver, final int dimensionId, final int provider) {
 		final FMLEmbeddedChannel channel = NetworkRegistry.INSTANCE.getChannel("FORGE", Side.SERVER);
 		channel.attr(FMLOutboundHandler.FML_MESSAGETARGET).set(target);
 		channel.attr(FMLOutboundHandler.FML_MESSAGETARGETARGS).set(receiver);
-		channel.writeOutbound(new ForgeMessage.DimensionRegisterMessage(dimensionId, environment == Environment.NETHER ? -1 : environment == Environment.THE_END ? 1 : 0));
+		this.sent.put(dimensionId, provider);
+		channel.writeOutbound(new ForgeMessage.DimensionRegisterMessage(dimensionId, provider));
+	}
+
+	private int getFreeDimension(final int provider) {
+		int dimensionId = DimensionManager.getNextFreeDimId();
+		while (DimensionManager.isDimensionRegistered(dimensionId) || this.sent.getOrDefault(dimensionId, provider) != provider) {
+			dimensionId++;
+		}
+		return dimensionId;
+	}
+
+	private int getClientProvider(final YmirWorldConfig config) {
+		if (!config.isSky()) {
+			return YmirSkylessWorldProvider.getType();
+		}
+		return config.getEnvironment() == Environment.NETHER ? -1 : config.getEnvironment() == Environment.THE_END ? 1 : 0;
 	}
 
 	private int register(final Environment environment) {

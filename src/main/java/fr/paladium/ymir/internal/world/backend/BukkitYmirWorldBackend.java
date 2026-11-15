@@ -3,11 +3,13 @@ package fr.paladium.ymir.internal.world.backend;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
+import fr.paladium.ymir.internal.world.provider.YmirSkylessWorldProvider;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
@@ -21,6 +23,8 @@ import net.minecraft.world.WorldServer;
 public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 
 	private static final BukkitYmirWorldBackend INSTANCE = new BukkitYmirWorldBackend();
+
+	private boolean skylessWarned;
 
 	public static BukkitYmirWorldBackend inst() {
 		return BukkitYmirWorldBackend.INSTANCE;
@@ -80,6 +84,7 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 		return bukkitPlayer.teleport(new Location(this.getBukkitWorld(world), x, y, z, yaw, pitch));
 	}
 
+	@SuppressWarnings("deprecation")
 	private WorldCreator creator(final YmirWorldConfig config) {
 		final WorldType type = WorldType.getByName(config.getType().getName());
 		if (type == null) {
@@ -88,7 +93,13 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 
 		final WorldCreator creator = new WorldCreator(config.getName());
 		creator.generateStructures(config.isStructures());
-		creator.environment(config.getEnvironment());
+		final Environment skyless = config.isSky() ? null : Environment.getEnvironment(YmirSkylessWorldProvider.getType());
+		if (!config.isSky() && skyless == null && !this.skylessWarned) {
+			this.skylessWarned = true;
+			System.err.println("[Ymir] The skyless world type is not registered in Bukkit, skyless worlds are created with a sky.");
+		}
+
+		creator.environment(skyless == null ? config.getEnvironment() : skyless);
 		creator.seed(config.getSeed());
 		creator.type(type);
 		return creator;

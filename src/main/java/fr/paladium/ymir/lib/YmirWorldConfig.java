@@ -32,6 +32,7 @@ public class YmirWorldConfig {
 	private int              platform;
 	private int              preload;
 	private Long             time;
+	private boolean          sky = true;
 	private boolean          weather = true;
 	private boolean          temporary;
 	private boolean          worldGuard;
@@ -72,6 +73,7 @@ public class YmirWorldConfig {
 		config.source = this.source;
 		config.time = this.time;
 		config.preload = this.preload;
+		config.sky = this.sky;
 		config.weather = this.weather;
 		config.platform = this.platform;
 		config.temporary = this.temporary;
@@ -116,6 +118,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C preload(final int radius) {
 		this.preload = radius;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C sky(final boolean sky) {
+		this.sky = sky;
 		return (C) this;
 	}
 

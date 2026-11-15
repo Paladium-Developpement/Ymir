@@ -162,6 +162,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `seed` | aléatoire | graine, numérique ou textuelle |
 | `structures` | `true` | génération des structures |
 | `environment` | `NORMAL` | `NORMAL`, `NETHER` ou `THE_END` |
+| `sky` | `true` | `false` crée un monde sans ciel, comme le Nether mais avec l'eau et la lave d'un monde normal : la lumière du ciel n'est ni calculée ni envoyée aux joueurs, seules les sources de lumière et une faible lumière d'ambiance éclairent. Sous Bukkit, il faut un serveur qui accepte les types de monde Forge (Cauldron) ; sinon le monde est créé avec un ciel et un avertissement s'affiche une fois |
 | `spawn` | selon le type | point d'apparition imposé, sans la recherche vanilla (aussi évitée pour `VOID`, `FLAT` et une `source`) |
 | `platform` | aucune | plateforme carrée de ce rayon sous le spawn, utile pour un monde vide |
 | `gamerule` | aucune | gamerules appliquées à chaque chargement |
