@@ -38,7 +38,9 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 			throw new YmirWorldException("Unable to find the world server of " + world.getName());
 		}
 
-		bukkitWorld.setKeepSpawnInMemory(world.getConfig().isKeepSpawnInMemory());
+		if (bukkitWorld.getKeepSpawnInMemory() != world.getConfig().isKeepSpawnInMemory()) {
+			bukkitWorld.setKeepSpawnInMemory(world.getConfig().isKeepSpawnInMemory());
+		}
 		bukkitWorld.setAutoSave(world.getConfig().isAutoSave());
 
 		return handle;
