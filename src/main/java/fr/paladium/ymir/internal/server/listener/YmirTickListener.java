@@ -7,6 +7,7 @@ import fr.paladium.ymir.internal.world.YmirWorldChunks;
 import fr.paladium.ymir.internal.world.YmirWorldDeletes;
 import fr.paladium.ymir.internal.world.YmirWorldLoads;
 import fr.paladium.ymir.internal.world.YmirWorldSaves;
+import fr.paladium.ymir.internal.world.YmirWorldUnloads;
 
 public class YmirTickListener {
 
@@ -16,6 +17,7 @@ public class YmirTickListener {
 			YmirWorldLoads.tick();
 			YmirWorldChunks.tick();
 			YmirWorldSaves.tick();
+			YmirWorldUnloads.tick();
 			YmirWorldDeletes.tick();
 		}
 	}

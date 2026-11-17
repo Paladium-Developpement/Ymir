@@ -102,7 +102,7 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
     .thenAccept(donjon -> donjon.teleport(player));
 ```
 
-Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. Le délai ne court pas tant que le préchargement n'est pas fini et il repart de zéro quand le monde est rendu, même si la file d'attente a duré plus longtemps que lui. Un monde supprimé ne se recharge plus : `load` et `teleport` lèvent une `YmirWorldException`, un nouveau monde du même nom se crée avec `Ymir.create`. Les suppressions dues sont faites deux par tick au plus. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
+Un monde `temporary` n'écrit jamais rien sur le disque et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. Tant qu'un joueur y est, les chunks qu'il quitte se déchargent quand même : un chunk jamais modifié (ni bloc, ni lumière, ni bloc-entité, aucune entité passée) est simplement oublié et se relit à l'identique depuis le modèle ou la carte source ; un chunk modifié est gardé en mémoire jusqu'à la suppression du monde, sans être tické, et revient tel quel. Un minerai cassé ne réapparaît donc pas et un coffre vidé ne se remplit pas. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. Le délai ne court pas tant que le préchargement n'est pas fini et il repart de zéro quand le monde est rendu, même si la file d'attente a duré plus longtemps que lui. Un monde supprimé ne se recharge plus : `load` et `teleport` lèvent une `YmirWorldException`, un nouveau monde du même nom se crée avec `Ymir.create`. Les suppressions dues sont faites deux par tick au plus. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
 
 ### Précharger
 
@@ -169,7 +169,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `gamerule` | aucune | gamerules appliquées à chaque chargement |
 | `unloadAfter` | jamais | déchargement après ce temps sans joueur |
 | `deleteAfter` | jamais | suppression après ce temps sans joueur |
-| `temporary` | `false` | monde jetable : jamais sauvegardé, supprimé au démarrage s'il est resté sur le disque |
+| `temporary` | `false` | monde jetable : rien n'est écrit sur le disque, les chunks non modifiés se déchargent sans sauvegarde et les chunks modifiés restent en mémoire ; supprimé au démarrage s'il est resté sur le disque |
 | `preload` | aucun | rayon de chunks chargés autour du spawn avant que `createAsync` rende le monde |
 | `time` | cycle normal | heure figée, réappliquée à chaque chargement |
 | `weather` | `true` | `false` garde un temps clair |

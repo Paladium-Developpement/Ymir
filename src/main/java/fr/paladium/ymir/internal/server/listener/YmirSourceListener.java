@@ -5,7 +5,7 @@ import java.lang.reflect.Field;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.ReflectionHelper;
-import fr.paladium.ymir.internal.world.source.YmirSourceChunkLoader;
+import fr.paladium.ymir.internal.world.YmirChunkLoader;
 import fr.paladium.ymir.internal.world.source.YmirSourceChunkProvider;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
@@ -57,9 +57,10 @@ public class YmirSourceListener {
 
 		if (config.getSource() != null) {
 			world.theChunkProviderServer.currentChunkProvider = new YmirSourceChunkProvider(world, config.getSource());
-			if (world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
-				world.theChunkProviderServer.currentChunkLoader = new YmirSourceChunkLoader(((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation);
-			}
+		}
+
+		if ((config.getSource() != null || config.isTemporary()) && world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
+			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation, config.isTemporary());
 		}
 	}
 
