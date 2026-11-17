@@ -4,7 +4,9 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent.Phase;
 import cpw.mods.fml.common.gameevent.TickEvent.ServerTickEvent;
 import fr.paladium.ymir.internal.world.YmirWorldChunks;
+import fr.paladium.ymir.internal.world.YmirWorldDeletes;
 import fr.paladium.ymir.internal.world.YmirWorldLoads;
+import fr.paladium.ymir.internal.world.YmirWorldSaves;
 
 public class YmirTickListener {
 
@@ -13,6 +15,8 @@ public class YmirTickListener {
 		if (event.phase == Phase.END) {
 			YmirWorldLoads.tick();
 			YmirWorldChunks.tick();
+			YmirWorldSaves.tick();
+			YmirWorldDeletes.tick();
 		}
 	}
 

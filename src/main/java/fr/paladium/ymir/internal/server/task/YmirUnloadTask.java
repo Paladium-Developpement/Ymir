@@ -6,9 +6,9 @@ import fr.paladium.palaforgeutils.lib.scheduler.MinecraftThread;
 import fr.paladium.palaforgeutils.lib.task.ATask;
 import fr.paladium.palaforgeutils.lib.task.Schedule;
 import fr.paladium.ymir.internal.world.YmirWorldChunks;
+import fr.paladium.ymir.internal.world.YmirWorldDeletes;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
-import fr.paladium.ymir.lib.YmirWorldException;
 
 @Schedule(every = "1s")
 public class YmirUnloadTask extends ATask {
@@ -38,22 +38,13 @@ public class YmirUnloadTask extends ATask {
 
 			final long empty = now - world.getEmptySince();
 			if (deleteAfter != null && empty >= deleteAfter.toMillis()) {
-				YmirUnloadTask.delete(world);
+				YmirWorldDeletes.execute(world);
 				continue;
 			}
 
 			if (unloadAfter != null && empty >= unloadAfter.toMillis()) {
 				world.unload();
 			}
-		}
-	}
-
-	private static void delete(final YmirWorld world) {
-		try {
-			world.delete();
-		} catch (final YmirWorldException e) {
-			System.err.println("[Ymir] Failed to delete the world " + world.getName() + ".");
-			e.printStackTrace();
 		}
 	}
 

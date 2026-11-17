@@ -35,6 +35,7 @@ public class YmirWorldConfig {
 	private boolean          sky = true;
 	private boolean          weather = true;
 	private boolean          temporary;
+	private boolean          batchSave;
 	private boolean          worldGuard;
 	private boolean          autoSave = true;
 	private boolean          structures = true;
@@ -78,6 +79,7 @@ public class YmirWorldConfig {
 		config.platform = this.platform;
 		config.temporary = this.temporary;
 		config.autoSave = this.autoSave;
+		config.batchSave = this.batchSave;
 		config.worldGuard = this.worldGuard;
 		config.structures = this.structures;
 		config.unloadAfter = this.unloadAfter;
@@ -139,6 +141,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C autoSave(final boolean autoSave) {
 		this.autoSave = autoSave;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C batchSave(final boolean batchSave) {
+		this.batchSave = batchSave;
 		return (C) this;
 	}
 

@@ -12,6 +12,7 @@ import org.bukkit.World;
 import fr.paladium.ymir.internal.world.YmirWorldChunks;
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
+import fr.paladium.ymir.internal.world.YmirWorldSaves;
 import fr.paladium.ymir.internal.world.backend.YmirWorldBackend;
 import fr.paladium.ymir.lib.event.YmirWorldEvent;
 import lombok.AccessLevel;
@@ -124,6 +125,9 @@ public final class YmirWorld {
 		this.reset = false;
 
 		this.handle = YmirWorldBackend.get().load(this);
+		if (YmirWorldSaves.isBatched(this)) {
+			this.handle.levelSaving = true;
+		}
 		this.config.getGamerules().forEach(this::setGamerule);
 		this.climate();
 		this.keepAlive();
@@ -158,7 +162,11 @@ public final class YmirWorld {
 
 		final int dimensionId = this.getDimensionId();
 		final boolean saving = save && !this.config.isTemporary();
-		final boolean written = saving || !this.handle.levelSaving;
+		final boolean written = saving || !this.handle.levelSaving || YmirWorldSaves.isBatched(this);
+		if (saving && YmirWorldSaves.isBatched(this)) {
+			this.handle.levelSaving = false;
+		}
+
 		if (!YmirWorldBackend.get().unload(this, saving)) {
 			return false;
 		}

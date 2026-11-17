@@ -102,7 +102,7 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
     .thenAccept(donjon -> donjon.teleport(player));
 ```
 
-Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. Le délai ne court pas tant que le préchargement n'est pas fini et il repart de zéro quand le monde est rendu, même si la file d'attente a duré plus longtemps que lui. Un monde supprimé ne se recharge plus : `load` et `teleport` lèvent une `YmirWorldException`, un nouveau monde du même nom se crée avec `Ymir.create`. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
+Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. Le délai ne court pas tant que le préchargement n'est pas fini et il repart de zéro quand le monde est rendu, même si la file d'attente a duré plus longtemps que lui. Un monde supprimé ne se recharge plus : `load` et `teleport` lèvent une `YmirWorldException`, un nouveau monde du même nom se crée avec `Ymir.create`. Les suppressions dues sont faites deux par tick au plus. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
 
 ### Précharger
 
@@ -175,6 +175,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `weather` | `true` | `false` garde un temps clair |
 | `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) ; à `false`, Bukkit ne prépare pas la zone du spawn à la création |
 | `autoSave` | `true` | sauvegarde automatique |
+| `batchSave` | `false` | sort le monde de la sauvegarde automatique du serveur, qui écrit tous les chunks de tous les mondes dans le même tick : Ymir le sauvegarde toutes les 30 s par lots de 24 chunks par tick, un monde à la fois, et les chunks déchargés restent sauvegardés |
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `source` | aucune | carte lue à la demande, décalée, tournée et bornée, au lieu de générer le monde |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |
