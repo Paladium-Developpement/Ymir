@@ -51,25 +51,18 @@ public final class YmirWorldChunks {
 
 	public static void tick() {
 		final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(5L);
-		int budget = 16;
-		boolean progress = true;
-		while (progress && budget > 0 && System.nanoTime() < deadline) {
-			progress = false;
-			for (final Queue<BooleanSupplier> queue : new ArrayList<>(YmirWorldChunks.QUEUES.values())) {
-				if (budget <= 0 || System.nanoTime() >= deadline) {
-					break;
-				}
-
-				if (queue.isEmpty() || !queue.peek().getAsBoolean()) {
-					continue;
-				}
-
+		int budget = 64;
+		for (final Queue<BooleanSupplier> queue : new ArrayList<>(YmirWorldChunks.QUEUES.values())) {
+			while (budget > 0 && System.nanoTime() < deadline && !queue.isEmpty() && queue.peek().getAsBoolean()) {
 				queue.poll();
 				budget--;
-				progress = true;
 			}
-			YmirWorldChunks.QUEUES.values().removeIf(Queue::isEmpty);
+
+			if (budget <= 0 || System.nanoTime() >= deadline) {
+				break;
+			}
 		}
+		YmirWorldChunks.QUEUES.values().removeIf(Queue::isEmpty);
 	}
 
 	public static boolean isPreloading(final YmirWorld world) {

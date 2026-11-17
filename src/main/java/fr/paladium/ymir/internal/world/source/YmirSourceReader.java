@@ -1,13 +1,17 @@
 package fr.paladium.ymir.internal.world.source;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import cpw.mods.fml.relauncher.ReflectionHelper;
 import fr.paladium.ymir.lib.YmirBlockRotationRegistry;
 import fr.paladium.ymir.lib.YmirWorldRotation;
 import fr.paladium.ymir.lib.YmirWorldSource;
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagDouble;
 import net.minecraft.nbt.NBTTagFloat;
@@ -20,11 +24,15 @@ public final class YmirSourceReader {
 	private static final YmirSourceReader INSTANCE = new YmirSourceReader();
 
 	private final int[][] permutations = new int[4][4096];
+	private final Field tickRefCount = ReflectionHelper.findField(ExtendedBlockStorage.class, "field_76683_c", "tickRefCount");
+	private final Field blockRefCount = ReflectionHelper.findField(ExtendedBlockStorage.class, "field_76682_b", "blockRefCount");
 	private final ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
 		final Thread thread = new Thread(runnable, "Ymir/Source");
 		thread.setDaemon(true);
 		return thread;
 	});
+
+	private int[] blockFlags;
 
 	private YmirSourceReader() {
 		for (final YmirWorldRotation rotation : YmirWorldRotation.values()) {
@@ -56,12 +64,13 @@ public final class YmirSourceReader {
 		final YmirWorldRotation rotation = source.getRotation();
 		final int[] permutation = rotation == YmirWorldRotation.NONE ? null : this.permutations[rotation.getQuarters()];
 		final int[] ids = YmirSourceRegistry.inst().getBlocks(source.getDirectory());
+		final int[] flags = this.getBlockFlags();
 		final ExtendedBlockStorage[] storages = new ExtendedBlockStorage[16];
 		final NBTTagList sections = level.getTagList("Sections", 10);
 		for (int index = 0; index < sections.tagCount(); index++) {
 			final NBTTagCompound section = sections.getCompoundTagAt(index);
 			final int y = section.getByte("Y");
-			storages[y] = this.convert(section, y, sky, ids, rotation, permutation);
+			storages[y] = this.convert(section, y, sky, ids, flags, rotation, permutation);
 		}
 
 		final NBTTagList entities = level.getTagList("Entities", 10);
@@ -75,21 +84,25 @@ public final class YmirSourceReader {
 		}
 
 		final byte[] biomes = level.hasKey("Biomes", 7) ? this.permute(level.getByteArray("Biomes"), permutation) : null;
-		return YmirSourceChunk.of(storages, biomes, level.getBoolean("LightPopulated"), entities, tileEntities);
+		return YmirSourceChunk.of(storages, biomes, entities, tileEntities);
 	}
 
-	private ExtendedBlockStorage convert(final NBTTagCompound section, final int y, final boolean sky, final int[] ids, final YmirWorldRotation rotation, final int[] permutation) {
+	private ExtendedBlockStorage convert(final NBTTagCompound section, final int y, final boolean sky, final int[] ids, final int[] flags, final YmirWorldRotation rotation, final int[] permutation) {
 		final ExtendedBlockStorage storage = new ExtendedBlockStorage(y << 4, sky);
 		final byte[] sourceBlocks = section.getByteArray("Blocks");
 		final byte[] sourceAdd = section.hasKey("Add", 7) ? section.getByteArray("Add") : null;
 		final byte[] blocks = new byte[4096];
 		final byte[] add = new byte[2048];
 		boolean high = false;
+		int blockRefs = 0;
+		int tickRefs = 0;
 		for (int index = 0; index < 4096; index++) {
 			final int id = ids[sourceBlocks[index] & 255 | (sourceAdd == null ? 0 : this.get(sourceAdd, index) << 8)];
 			blocks[index] = (byte) id;
 			this.set(add, index, id >> 8);
 			high |= id > 255;
+			blockRefs += flags[id] & 1;
+			tickRefs += flags[id] >> 1;
 		}
 
 		storage.setBlockMetadataArray(this.rotate(blocks, add, section.getByteArray("Data"), rotation, permutation));
@@ -103,8 +116,25 @@ public final class YmirSourceReader {
 			storage.setSkylightArray(this.permuteNibbles(section.getByteArray("SkyLight"), permutation));
 		}
 
-		storage.removeInvalidBlocks();
+		try {
+			this.blockRefCount.setInt(storage, blockRefs);
+			this.tickRefCount.setInt(storage, tickRefs);
+		} catch (final IllegalAccessException e) {
+			storage.removeInvalidBlocks();
+		}
 		return storage;
+	}
+
+	private synchronized int[] getBlockFlags() {
+		if (this.blockFlags == null) {
+			final int[] flags = new int[4096];
+			for (int id = 0; id < flags.length; id++) {
+				final Block block = Block.getBlockById(id);
+				flags[id] = block == Blocks.air ? 0 : block.getTickRandomly() ? 3 : 1;
+			}
+			this.blockFlags = flags;
+		}
+		return this.blockFlags;
 	}
 
 	private NibbleArray rotate(final byte[] blocks, final byte[] add, final byte[] data, final YmirWorldRotation rotation, final int[] permutation) {

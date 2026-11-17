@@ -12,12 +12,11 @@ public final class YmirSourceChunk {
 
 	private final byte[] biomes;
 	private final NBTTagList entities;
-	private final boolean lightPopulated;
 	private final NBTTagList tileEntities;
 	private final ExtendedBlockStorage[] storages;
 
-	public static YmirSourceChunk of(final ExtendedBlockStorage[] storages, final byte[] biomes, final boolean lightPopulated, final NBTTagList entities, final NBTTagList tileEntities) {
-		return new YmirSourceChunk(biomes, entities, lightPopulated, tileEntities, storages);
+	public static YmirSourceChunk of(final ExtendedBlockStorage[] storages, final byte[] biomes, final NBTTagList entities, final NBTTagList tileEntities) {
+		return new YmirSourceChunk(biomes, entities, tileEntities, storages);
 	}
 
 }

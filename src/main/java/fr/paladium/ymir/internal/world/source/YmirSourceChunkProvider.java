@@ -1,5 +1,6 @@
 package fr.paladium.ymir.internal.world.source;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -101,6 +102,24 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		}
 	}
 
+	public void prefetch(final int centerX, final int centerZ, final int radius) {
+		final Iterator<Map.Entry<Long, CompletableFuture<Optional<YmirSourceChunk>>>> iterator = this.prefetched.entrySet().iterator();
+		while (iterator.hasNext()) {
+			final Map.Entry<Long, CompletableFuture<Optional<YmirSourceChunk>>> entry = iterator.next();
+			final long key = entry.getKey();
+			if (Math.max(Math.abs((int) key - centerX), Math.abs((int) (key >> 32) - centerZ)) > radius) {
+				entry.getValue().cancel(false);
+				iterator.remove();
+			}
+		}
+
+		for (int x = centerX - radius; x <= centerX + radius; x++) {
+			for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+				this.prefetch(x, z);
+			}
+		}
+	}
+
 	public boolean isPrefetched(final int x, final int z) {
 		final CompletableFuture<Optional<YmirSourceChunk>> prefetch = this.prefetched.get(ChunkCoordIntPair.chunkXZ2Int(x, z));
 		return prefetch == null || prefetch.isDone();
@@ -110,6 +129,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		final Chunk chunk = new Chunk(this.world, x, z);
 		chunk.generateSkylightMap();
 		chunk.isTerrainPopulated = true;
+		chunk.isLightPopulated = true;
 		return chunk;
 	}
 
@@ -122,7 +142,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 		this.heightMap(chunk);
 		chunk.isTerrainPopulated = true;
-		chunk.isLightPopulated = source.isLightPopulated();
+		chunk.isLightPopulated = true;
 		this.entities(chunk, source.getEntities());
 		this.tileEntities(chunk, source.getTileEntities());
 		return chunk;

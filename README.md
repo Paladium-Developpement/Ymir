@@ -110,7 +110,7 @@ Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque aprè
 world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x, y, z, yaw, pitch));
 ```
 
-Les chunks demandés se chargent quelques-uns par tick, avec un budget de temps partagé par tous les mondes, depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
+Les chunks demandés se chargent jusqu'à 64 par tick, dans un budget de 5 ms partagé par tous les mondes et monde après monde, dans l'ordre des demandes : le premier arrivé n'attend pas les suivants. Ils viennent depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
 
 ### Lire une carte source
 
@@ -126,7 +126,7 @@ Ymir.createAsync(YmirWorldConfig.create("terres-" + id)
 
 Un monde source démarre vide et lit chaque chunk à la demande dans une carte déjà générée, ouverte en lecture seule et partagée par tous les mondes qui l'utilisent : rien n'est copié, une carte de plusieurs gigaoctets sert des centaines de mondes. Le chunk lu est décalé de `offset` chunks, tourné de `rotation` (un quart de tour vers la droite à chaque cran) avec ses blocs orientés, ses biomes, ses entités et ses blocs-entités, puis il vit comme un chunk normal : il est sauvegardé dans le monde et relu depuis le disque ensuite. Hors de `bounds` (en chunks, dans les coordonnées du monde) le monde reste vide. Le monde n'est ni peuplé ni décoré par les mods, et il fonctionne pour tous les environnements, Nether compris.
 
-La carte doit être carrée et centrée sur 0, 0, sinon des chunks manquent dans le monde. Placez-la sur un disque local rapide : chaque chunk est lu au hasard dans la carte. Un chunk demandé par `preload` est préparé en arrière-plan, et sur le thread serveur il ne reste qu'à poser ses tableaux de blocs, ses entités et ses blocs-entités.
+La carte doit être carrée et centrée sur 0, 0, sinon des chunks manquent dans le monde. Placez-la sur un disque local rapide : chaque chunk est lu au hasard dans la carte. Un chunk demandé par `preload` est préparé en arrière-plan, et sur le thread serveur il ne reste qu'à poser ses tableaux de blocs, ses entités et ses blocs-entités. Quand un joueur change de chunk, l'anneau de chunks à la distance de vue + 2 autour de lui est lu de la même façon en avance : en se déplaçant, il n'entre que dans des chunks déjà préparés. Les chunks lus sont marqués comme éclairés (la lumière de la carte est copiée et tournée avec eux), et un monde source ne crée jamais de fichier de région vide sur le thread serveur.
 
 Pour choisir un point d'apparition sans charger le monde, lisez directement la carte, déjà décalée et tournée :
 
