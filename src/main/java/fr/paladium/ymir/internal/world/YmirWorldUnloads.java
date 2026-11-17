@@ -11,7 +11,7 @@ public final class YmirWorldUnloads {
 
 	public static void tick() {
 		for (final YmirWorld world : Ymir.getWorlds()) {
-			if (!world.getConfig().isTemporary() || !world.isLoaded() || world.getPlayers().isEmpty() || !(world.getHandle().theChunkProviderServer.currentChunkLoader instanceof YmirChunkLoader)) {
+			if (!world.getConfig().isTemporary() || world.getConfig().isKeepLoaded() || !world.isLoaded() || world.getPlayers().isEmpty() || !(world.getHandle().theChunkProviderServer.currentChunkLoader instanceof YmirChunkLoader)) {
 				continue;
 			}
 

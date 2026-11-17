@@ -43,7 +43,9 @@ public final class YmirWorldSaves {
 			final WorldServer handle = world.getHandle();
 			handle.levelSaving = false;
 			try {
-				handle.theChunkProviderServer.unloadQueuedChunks();
+				if (!world.getConfig().isKeepLoaded()) {
+					handle.theChunkProviderServer.unloadQueuedChunks();
+				}
 				if (world == YmirWorldSaves.saving && handle.theChunkProviderServer.saveChunks(false, null)) {
 					YmirWorldSaves.NEXT_SAVES.put(world, now + 30000L);
 					YmirWorldSaves.saving = null;

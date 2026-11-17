@@ -37,6 +37,7 @@ public class YmirWorldConfig {
 	private boolean          temporary;
 	private boolean          batchSave;
 	private boolean          worldGuard;
+	private boolean          keepLoaded;
 	private boolean          autoSave = true;
 	private boolean          structures = true;
 	private boolean          keepSpawnInMemory;
@@ -87,6 +88,7 @@ public class YmirWorldConfig {
 		config.environment = this.environment;
 		config.platformBlock = this.platformBlock;
 		config.keepSpawnInMemory = this.keepSpawnInMemory;
+		config.keepLoaded = this.keepLoaded;
 		config.tab = this.tab;
 		config.chat = this.chat;
 		config.linked.addAll(this.linked);
@@ -191,6 +193,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C keepSpawnInMemory(final boolean keepSpawnInMemory) {
 		this.keepSpawnInMemory = keepSpawnInMemory;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C keepLoaded(final boolean keepLoaded) {
+		this.keepLoaded = keepLoaded;
 		return (C) this;
 	}
 

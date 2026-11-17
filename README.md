@@ -173,6 +173,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `preload` | aucun | rayon de chunks chargés autour du spawn avant que `createAsync` rende le monde |
 | `time` | cycle normal | heure figée, réappliquée à chaque chargement |
 | `weather` | `true` | `false` garde un temps clair |
+| `keepLoaded` | `false` | garde chargés tous les chunks déjà chargés d'un monde `temporary` ou `batchSave` tant qu'il existe, pour que les blocs-entités et les machines d'un petit monde tickent partout (labo) ; sans effet sur un monde ordinaire, déchargé par le serveur |
 | `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) ; à `false`, Bukkit ne prépare pas la zone du spawn à la création |
 | `autoSave` | `true` | sauvegarde automatique |
 | `batchSave` | `false` | sort le monde de la sauvegarde automatique du serveur, qui écrit tous les chunks de tous les mondes dans le même tick : Ymir le sauvegarde toutes les 30 s par lots de 24 chunks par tick, un monde à la fois, et les chunks déchargés restent sauvegardés ; un monde vide qui attend sa suppression (`deleteAfter`) garde ses chunks en mémoire sans les sauvegarder ni les décharger, pour qu'une vague de déconnexions ne lance pas une salve d'écritures |
