@@ -40,6 +40,7 @@ public class YmirWorldConfig {
 	private boolean          keepLoaded;
 	private boolean          autoSave = true;
 	private boolean          structures = true;
+	private boolean          randomTicks = true;
 	private boolean          keepSpawnInMemory;
 	private File             template;
 	private Duration         unloadAfter;
@@ -77,6 +78,7 @@ public class YmirWorldConfig {
 		config.preload = this.preload;
 		config.sky = this.sky;
 		config.weather = this.weather;
+		config.randomTicks = this.randomTicks;
 		config.platform = this.platform;
 		config.temporary = this.temporary;
 		config.autoSave = this.autoSave;
@@ -132,6 +134,11 @@ public class YmirWorldConfig {
 
 	public final @NonNull <C extends YmirWorldConfig> C weather(final boolean weather) {
 		this.weather = weather;
+		return (C) this;
+	}
+
+	public final @NonNull <C extends YmirWorldConfig> C randomTicks(final boolean randomTicks) {
+		this.randomTicks = randomTicks;
 		return (C) this;
 	}
 
