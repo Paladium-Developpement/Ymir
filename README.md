@@ -90,7 +90,7 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
     .thenAccept(donjon -> donjon.teleport(player));
 ```
 
-`createAsync` copie le modèle hors du thread serveur, puis crée le monde sur le thread serveur, un monde par tick au plus : vingt joueurs qui arrivent ensemble étalent leurs créations sur vingt ticks au lieu de geler le serveur pendant un seul.
+`createAsync` copie le modèle sur des threads dédiés, hors du thread serveur, puis crée le monde sur le thread serveur, autant de mondes par tick que le permet un budget de 12 ms : vingt joueurs qui arrivent ensemble entrent en quelques ticks sans geler le serveur.
 
 ### Mondes jetables
 
@@ -111,7 +111,7 @@ Un monde `temporary` n'écrit jamais rien sur le disque et ses chunks se lisent 
 world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x, y, z, yaw, pitch));
 ```
 
-Les chunks demandés se chargent jusqu'à 64 par tick, dans un budget de 5 ms partagé par tous les mondes et monde après monde, dans l'ordre des demandes : le premier arrivé n'attend pas les suivants. Ils viennent depuis le disque en arrière-plan quand ils existent : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
+Les chunks demandés se chargent dans un budget de 5 ms et 64 chargements faits sur le thread serveur par tick, partagé par tous les mondes et monde après monde, dans l'ordre des demandes : le premier arrivé n'attend pas les suivants. Ils viennent depuis le disque en arrière-plan quand ils existent, et ces lectures ne consomment pas le budget : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
 
 ### Lire une carte source
 

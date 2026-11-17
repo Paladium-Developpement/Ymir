@@ -9,7 +9,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 import fr.paladium.ymir.internal.world.source.YmirSourceChunkProvider;
 import fr.paladium.ymir.lib.YmirWorld;
@@ -17,11 +17,12 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.chunk.IChunkProvider;
+import net.minecraft.world.gen.ChunkProviderServer;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class YmirWorldChunks {
 
-	private static final Map<YmirWorld, Queue<BooleanSupplier>> QUEUES = new LinkedHashMap<>();
+	private static final Map<YmirWorld, Queue<Supplier<Load>>> QUEUES = new LinkedHashMap<>();
 
 	public static CompletableFuture<YmirWorld> preload(final YmirWorld world, final Collection<ChunkCoordIntPair> chunks) {
 		final CompletableFuture<YmirWorld> future = new CompletableFuture<>();
@@ -39,7 +40,7 @@ public final class YmirWorldChunks {
 
 		final IChunkProvider provider = world.getHandle().theChunkProviderServer.currentChunkProvider;
 		final YmirSourceChunkProvider source = provider instanceof YmirSourceChunkProvider ? (YmirSourceChunkProvider) provider : null;
-		final Queue<BooleanSupplier> queue = YmirWorldChunks.QUEUES.computeIfAbsent(world, key -> new ArrayDeque<>());
+		final Queue<Supplier<Load>> queue = YmirWorldChunks.QUEUES.computeIfAbsent(world, key -> new ArrayDeque<>());
 		for (final ChunkCoordIntPair chunk : chunks) {
 			if (source != null) {
 				source.prefetch(chunk.chunkXPos, chunk.chunkZPos);
@@ -52,10 +53,17 @@ public final class YmirWorldChunks {
 	public static void tick() {
 		final long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(5L);
 		int budget = 64;
-		for (final Queue<BooleanSupplier> queue : new ArrayList<>(YmirWorldChunks.QUEUES.values())) {
-			while (budget > 0 && System.nanoTime() < deadline && !queue.isEmpty() && queue.peek().getAsBoolean()) {
+		for (final Queue<Supplier<Load>> queue : new ArrayList<>(YmirWorldChunks.QUEUES.values())) {
+			while (budget > 0 && System.nanoTime() < deadline && !queue.isEmpty()) {
+				final Load load = queue.peek().get();
+				if (load == Load.PENDING) {
+					break;
+				}
+
 				queue.poll();
-				budget--;
+				if (load == Load.SYNC) {
+					budget--;
+				}
 			}
 
 			if (budget <= 0 || System.nanoTime() >= deadline) {
@@ -69,24 +77,32 @@ public final class YmirWorldChunks {
 		return YmirWorldChunks.QUEUES.containsKey(world);
 	}
 
-	private static boolean load(final YmirWorld world, final YmirSourceChunkProvider source, final ChunkCoordIntPair chunk, final Runnable loaded) {
+	private static Load load(final YmirWorld world, final YmirSourceChunkProvider source, final ChunkCoordIntPair chunk, final Runnable loaded) {
 		if (!world.isLoaded()) {
 			loaded.run();
-			return true;
+			return Load.ASYNC;
 		}
 
+		final ChunkProviderServer provider = world.getHandle().theChunkProviderServer;
 		if (source == null) {
-			world.getHandle().theChunkProviderServer.loadChunk(chunk.chunkXPos, chunk.chunkZPos, loaded);
-			return true;
+			final boolean present = provider.chunkExists(chunk.chunkXPos, chunk.chunkZPos);
+			provider.loadChunk(chunk.chunkXPos, chunk.chunkZPos, loaded);
+			return present || !provider.chunkExists(chunk.chunkXPos, chunk.chunkZPos) ? Load.ASYNC : Load.SYNC;
 		}
 
 		if (!source.isPrefetched(chunk.chunkXPos, chunk.chunkZPos)) {
-			return false;
+			return Load.PENDING;
 		}
 
-		world.getHandle().theChunkProviderServer.loadChunk(chunk.chunkXPos, chunk.chunkZPos);
+		provider.loadChunk(chunk.chunkXPos, chunk.chunkZPos);
 		loaded.run();
-		return true;
+		return Load.SYNC;
+	}
+
+	private enum Load {
+		PENDING,
+		ASYNC,
+		SYNC;
 	}
 
 }
