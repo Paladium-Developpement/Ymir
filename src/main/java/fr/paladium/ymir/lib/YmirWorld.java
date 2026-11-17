@@ -37,6 +37,7 @@ public final class YmirWorld {
 
 	@Getter(AccessLevel.NONE) private boolean reset;
 	@Getter(AccessLevel.NONE) private boolean fresh;
+	@Getter(AccessLevel.NONE) private boolean deleted;
 	@Getter(AccessLevel.NONE) private boolean prepared;
 
 	protected YmirWorld(final @NonNull YmirWorldConfig config) {
@@ -104,6 +105,10 @@ public final class YmirWorld {
 	}
 
 	public @NonNull YmirWorld load() {
+		if (this.deleted) {
+			throw new YmirWorldException("The world " + this.getName() + " has been deleted");
+		}
+
 		if (this.isLoaded()) {
 			return this;
 		}
@@ -174,6 +179,7 @@ public final class YmirWorld {
 			throw new YmirWorldException("The world " + this.getName() + " still contains players");
 		}
 
+		this.deleted = true;
 		MinecraftForge.EVENT_BUS.post(new YmirWorldEvent.Delete(this));
 		Ymir.forget(this);
 

@@ -102,7 +102,7 @@ Ymir.createAsync(YmirWorldConfig.create("donjon-" + id)
     .thenAccept(donjon -> donjon.teleport(player));
 ```
 
-Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
+Un monde `temporary` n'est jamais sauvegardé et, s'il reste sur le disque après un arrêt brutal, il est supprimé au démarrage suivant avec sa configuration WorldGuard. `deleteAfter` le supprime quand il est resté vide ce temps : un joueur qui se reconnecte avant retrouve son monde. Le délai ne court pas tant que le préchargement n'est pas fini et il repart de zéro quand le monde est rendu, même si la file d'attente a duré plus longtemps que lui. Un monde supprimé ne se recharge plus : `load` et `teleport` lèvent une `YmirWorldException`, un nouveau monde du même nom se crée avec `Ymir.create`. `preload` charge les chunks autour du spawn avant de rendre le monde, sans dépasser un budget de chunks par tick partagé par tous les mondes.
 
 ### Précharger
 

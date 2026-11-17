@@ -33,7 +33,7 @@ public final class YmirWorldChunks {
 		final AtomicInteger remaining = new AtomicInteger(chunks.size());
 		final Runnable loaded = () -> {
 			if (remaining.decrementAndGet() == 0) {
-				future.complete(world);
+				future.complete(world.keepAlive());
 			}
 		};
 
@@ -70,6 +70,10 @@ public final class YmirWorldChunks {
 			}
 			YmirWorldChunks.QUEUES.values().removeIf(Queue::isEmpty);
 		}
+	}
+
+	public static boolean isPreloading(final YmirWorld world) {
+		return YmirWorldChunks.QUEUES.containsKey(world);
 	}
 
 	private static boolean load(final YmirWorld world, final YmirSourceChunkProvider source, final ChunkCoordIntPair chunk, final Runnable loaded) {

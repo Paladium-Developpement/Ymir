@@ -5,6 +5,7 @@ import java.time.Duration;
 import fr.paladium.palaforgeutils.lib.scheduler.MinecraftThread;
 import fr.paladium.palaforgeutils.lib.task.ATask;
 import fr.paladium.palaforgeutils.lib.task.Schedule;
+import fr.paladium.ymir.internal.world.YmirWorldChunks;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldException;
@@ -30,7 +31,7 @@ public class YmirUnloadTask extends ATask {
 				continue;
 			}
 
-			if (!world.getPlayers().isEmpty()) {
+			if (!world.getPlayers().isEmpty() || YmirWorldChunks.isPreloading(world)) {
 				world.keepAlive();
 				continue;
 			}
