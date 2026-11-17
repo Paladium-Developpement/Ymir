@@ -1,4 +1,4 @@
-package fr.paladium.ymir.internal.world.source;
+package fr.paladium.ymir.internal.world.region;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -16,12 +16,12 @@ import java.util.zip.InflaterInputStream;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 
-public final class YmirSourceRegion {
+public final class ReadOnlyYmirRegion implements IYmirRegion {
 
 	private final FileChannel channel;
 	private final int[] locations = new int[1024];
 
-	public YmirSourceRegion(final File file) throws IOException {
+	public ReadOnlyYmirRegion(final File file) throws IOException {
 		this.channel = FileChannel.open(file.toPath(), StandardOpenOption.READ);
 		try {
 			this.read(ByteBuffer.allocate(4096), 0L).asIntBuffer().get(this.locations);
@@ -31,6 +31,12 @@ public final class YmirSourceRegion {
 		}
 	}
 
+	@Override
+	public boolean exists(final int chunkX, final int chunkZ) {
+		return (this.locations[(chunkX & 31) + (chunkZ & 31) * 32] & 255) != 0;
+	}
+
+	@Override
 	public Optional<NBTTagCompound> read(final int chunkX, final int chunkZ) throws IOException {
 		final int location = this.locations[(chunkX & 31) + (chunkZ & 31) * 32];
 		if ((location & 255) == 0) {
@@ -49,6 +55,7 @@ public final class YmirSourceRegion {
 		}
 	}
 
+	@Override
 	public void close() throws IOException {
 		this.channel.close();
 	}

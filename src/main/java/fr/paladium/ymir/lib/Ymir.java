@@ -72,8 +72,12 @@ public final class Ymir {
 
 		final File from = YmirWorldFiles.getDirectory(source.getName());
 		final File to = YmirWorldFiles.getDirectory(target.getName());
+		final YmirWorldConfig known = Ymir.get(source.getName()).map(YmirWorld::getConfig).orElse(source);
 		return CompletableFuture.supplyAsync(() -> {
 			YmirWorldFiles.flush();
+			if (known.isTemporary() && known.getTemplate() != null) {
+				YmirWorldFiles.copy(known.getTemplate(), to);
+			}
 			YmirWorldFiles.copy(from, to);
 			YmirWorldFiles.reset(to, target);
 			YmirWorldFiles.copyLinked(source, source.getName(), target.getName());

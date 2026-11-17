@@ -1,5 +1,6 @@
 package fr.paladium.ymir.internal.world.source;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -7,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import cpw.mods.fml.relauncher.ReflectionHelper;
+import fr.paladium.ymir.internal.world.region.YmirRegionCache;
 import fr.paladium.ymir.lib.YmirBlockRotationRegistry;
 import fr.paladium.ymir.lib.YmirWorldRotation;
 import fr.paladium.ymir.lib.YmirWorldSource;
@@ -53,7 +55,14 @@ public final class YmirSourceReader {
 			return Optional.empty();
 		}
 
-		return YmirSourceRegionCache.inst().read(source.getDirectory(), source.getSourceChunkX(chunkX, chunkZ), source.getSourceChunkZ(chunkX, chunkZ)).map(root -> this.convert(root.getCompoundTag("Level"), source, sky));
+		final int sourceX = source.getSourceChunkX(chunkX, chunkZ);
+		final int sourceZ = source.getSourceChunkZ(chunkX, chunkZ);
+		try {
+			return YmirRegionCache.inst().read(YmirRegionCache.inst().getFile(source.getDirectory(), sourceX, sourceZ), sourceX, sourceZ, false).map(root -> this.convert(root.getCompoundTag("Level"), source, sky));
+		} catch (final IOException e) {
+			System.err.println("[Ymir] Unable to read the source chunk " + sourceX + ", " + sourceZ + " of " + source.getDirectory() + ": " + e.getMessage());
+			return Optional.empty();
+		}
 	}
 
 	public CompletableFuture<Optional<YmirSourceChunk>> readAsync(final YmirWorldSource source, final int chunkX, final int chunkZ, final boolean sky) {

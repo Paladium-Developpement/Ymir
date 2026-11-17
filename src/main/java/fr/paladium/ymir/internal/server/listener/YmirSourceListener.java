@@ -1,11 +1,14 @@
 package fr.paladium.ymir.internal.server.listener;
 
+import java.io.File;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.ReflectionHelper;
 import fr.paladium.ymir.internal.world.YmirChunkLoader;
+import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.source.YmirSourceChunkProvider;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
@@ -59,9 +62,19 @@ public class YmirSourceListener {
 			world.theChunkProviderServer.currentChunkProvider = new YmirSourceChunkProvider(world, config.getSource());
 		}
 
-		if ((config.getSource() != null || config.isTemporary()) && world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
-			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation, config.isTemporary());
+		if (world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
+			final File directory = ((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation;
+			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, this.getTemplate(config, directory), config.isTemporary());
 		}
+	}
+
+	private File getTemplate(final YmirWorldConfig config, final File directory) {
+		if (!config.isTemporary() || config.getTemplate() == null) {
+			return null;
+		}
+
+		final Path root = YmirWorldFiles.getDirectory(config.getName()).toPath().toAbsolutePath().normalize();
+		return config.getTemplate().toPath().resolve(root.relativize(directory.toPath().toAbsolutePath().normalize())).toFile();
 	}
 
 	private int getViewRadius(final WorldServer world) {

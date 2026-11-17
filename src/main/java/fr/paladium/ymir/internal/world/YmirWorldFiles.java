@@ -18,6 +18,7 @@ import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
 
+import fr.paladium.ymir.internal.world.region.YmirRegionCache;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
@@ -85,7 +86,7 @@ public final class YmirWorldFiles {
 
 	public static void prepare(final YmirWorldConfig config) {
 		if (config.getTemplate() != null && !YmirWorldFiles.exists(config.getName())) {
-			YmirWorldFiles.copy(config.getTemplate(), YmirWorldFiles.getDirectory(config.getName()));
+			YmirWorldFiles.copy(config.getTemplate(), YmirWorldFiles.getDirectory(config.getName()), !config.isTemporary());
 		}
 
 		if (config.isWorldGuard()) {
@@ -121,12 +122,20 @@ public final class YmirWorldFiles {
 	}
 
 	public static void copy(final File source, final File target) {
+		YmirWorldFiles.copy(source, target, true);
+	}
+
+	public static void copy(final File source, final File target, final boolean regions) {
 		if (!source.isDirectory()) {
 			throw new YmirWorldException("The directory " + source.getAbsolutePath() + " does not exist");
 		}
 
 		try {
 			FileUtils.copyDirectory(source, target, file -> {
+				if (!regions && file.isDirectory() && "region".equals(file.getName())) {
+					return false;
+				}
+
 				for (final String exclude : YmirWorldFiles.COPY_EXCLUDES) {
 					if (exclude.equalsIgnoreCase(file.getName())) {
 						return false;
@@ -234,6 +243,7 @@ public final class YmirWorldFiles {
 	}
 
 	private static void close(final File directory) {
+		YmirRegionCache.inst().close(directory);
 		final Map<File, RegionFile> regions = YmirWorldFiles.regions();
 		if (regions == null) {
 			return;
