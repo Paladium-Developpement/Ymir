@@ -175,7 +175,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `weather` | `true` | `false` garde un temps clair |
 | `keepSpawnInMemory` | `false` | garde les chunks du spawn chargés (Bukkit seulement) ; à `false`, Bukkit ne prépare pas la zone du spawn à la création |
 | `autoSave` | `true` | sauvegarde automatique |
-| `batchSave` | `false` | sort le monde de la sauvegarde automatique du serveur, qui écrit tous les chunks de tous les mondes dans le même tick : Ymir le sauvegarde toutes les 30 s par lots de 24 chunks par tick, un monde à la fois, et les chunks déchargés restent sauvegardés |
+| `batchSave` | `false` | sort le monde de la sauvegarde automatique du serveur, qui écrit tous les chunks de tous les mondes dans le même tick : Ymir le sauvegarde toutes les 30 s par lots de 24 chunks par tick, un monde à la fois, et les chunks déchargés restent sauvegardés ; un monde vide qui attend sa suppression (`deleteAfter`) garde ses chunks en mémoire sans les sauvegarder ni les décharger, pour qu'une vague de déconnexions ne lance pas une salve d'écritures |
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `source` | aucune | carte lue à la demande, décalée, tournée et bornée, au lieu de générer le monde |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |

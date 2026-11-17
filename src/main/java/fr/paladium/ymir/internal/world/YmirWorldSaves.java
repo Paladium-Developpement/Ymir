@@ -26,7 +26,7 @@ public final class YmirWorldSaves {
 		final long now = System.currentTimeMillis();
 		final List<YmirWorld> worlds = new ArrayList<>();
 		for (final YmirWorld world : Ymir.getWorlds()) {
-			if (YmirWorldSaves.isBatched(world) && world.isLoaded()) {
+			if (YmirWorldSaves.isBatched(world) && world.isLoaded() && !YmirWorldSaves.isPendingDeletion(world)) {
 				worlds.add(world);
 				YmirWorldSaves.NEXT_SAVES.putIfAbsent(world, now + 30000L);
 				if (YmirWorldSaves.saving == null && YmirWorldSaves.NEXT_SAVES.get(world) <= now) {
@@ -52,6 +52,10 @@ public final class YmirWorldSaves {
 				handle.levelSaving = true;
 			}
 		}
+	}
+
+	private static boolean isPendingDeletion(final YmirWorld world) {
+		return world.getConfig().getDeleteAfter() != null && world.getPlayers().isEmpty();
 	}
 
 }
