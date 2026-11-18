@@ -135,7 +135,7 @@ Pour choisir un point d'apparition sans charger le monde, lisez directement la c
 source.read(chunkX, chunkZ).thenAccept(chunk -> chunk.ifPresent(storages -> storages[y >> 4].getBlockByExtId(x & 15, y & 15, z & 15)));
 ```
 
-La suite de `read` s'exécute hors du thread serveur : lisez les blocs, ne touchez pas au jeu.
+La suite de `read` s'exécute hors du thread serveur : lisez les blocs, ne touchez pas au jeu. Les chunks lus ainsi (256 au plus par source) sont repris par le `preload` du monde créé avec cette source au lieu d'être relus, puis oubliés : ne modifiez pas les tableaux de blocs reçus. Les lectures d'un monde sans ciel (Nether) ne sont pas reprises.
 
 L'orientation des blocs vanilla est fournie (troncs, escaliers, lianes, torches, coffres, portes…). Un mod enregistre celle de ses blocs :
 

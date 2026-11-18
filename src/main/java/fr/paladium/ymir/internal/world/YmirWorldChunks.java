@@ -47,6 +47,10 @@ public final class YmirWorldChunks {
 			}
 			queue.add(() -> YmirWorldChunks.load(world, source, chunk, loaded));
 		}
+
+		if (source != null) {
+			source.release();
+		}
 		return future;
 	}
 

@@ -1,8 +1,10 @@
 package fr.paladium.ymir.lib;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import fr.paladium.ymir.internal.world.source.YmirSourceChunk;
 import fr.paladium.ymir.internal.world.source.YmirSourceReader;
@@ -10,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 @Getter
@@ -17,6 +20,9 @@ import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 public final class YmirWorldSource {
 
 	private final File directory;
+
+	@Getter(AccessLevel.NONE)
+	private final Map<Long, CompletableFuture<Optional<YmirSourceChunk>>> reads = new ConcurrentHashMap<>();
 
 	private int offsetX;
 	private int offsetZ;
@@ -58,7 +64,21 @@ public final class YmirWorldSource {
 	}
 
 	public @NonNull CompletableFuture<Optional<ExtendedBlockStorage[]>> read(final int chunkX, final int chunkZ) {
-		return YmirSourceReader.inst().readAsync(this, chunkX, chunkZ, true).thenApply(chunk -> chunk.map(YmirSourceChunk::getStorages));
+		final CompletableFuture<Optional<YmirSourceChunk>> read = YmirSourceReader.inst().readAsync(this, chunkX, chunkZ, true);
+		if (this.reads.size() < 256) {
+			this.reads.putIfAbsent(ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ), read);
+		}
+		return read.thenApply(chunk -> chunk.map(YmirSourceChunk::getStorages));
+	}
+
+	public @NonNull Optional<CompletableFuture<Optional<YmirSourceChunk>>> take(final int chunkX, final int chunkZ, final boolean sky) {
+		final CompletableFuture<Optional<YmirSourceChunk>> read = this.reads.remove(ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ));
+		return sky ? Optional.ofNullable(read) : Optional.empty();
+	}
+
+	public @NonNull YmirWorldSource release() {
+		this.reads.clear();
+		return this;
 	}
 
 	public int getSourceChunkX(final int chunkX, final int chunkZ) {

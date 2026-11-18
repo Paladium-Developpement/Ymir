@@ -98,7 +98,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 	public void prefetch(final int x, final int z) {
 		if (this.source.contains(x, z) && !this.world.theChunkProviderServer.chunkExists(x, z)) {
-			this.prefetched.computeIfAbsent(ChunkCoordIntPair.chunkXZ2Int(x, z), key -> YmirSourceReader.inst().readAsync(this.source, x, z, !this.world.provider.hasNoSky));
+			this.prefetched.computeIfAbsent(ChunkCoordIntPair.chunkXZ2Int(x, z), key -> this.source.take(x, z, !this.world.provider.hasNoSky).orElseGet(() -> YmirSourceReader.inst().readAsync(this.source, x, z, !this.world.provider.hasNoSky)));
 		}
 	}
 
@@ -118,6 +118,10 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 				this.prefetch(x, z);
 			}
 		}
+	}
+
+	public void release() {
+		this.source.release();
 	}
 
 	public boolean isPrefetched(final int x, final int z) {
