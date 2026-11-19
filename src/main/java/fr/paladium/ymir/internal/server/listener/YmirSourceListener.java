@@ -61,7 +61,7 @@ public class YmirSourceListener {
 
 		if (this.unloadSpawnChunks != null) {
 			try {
-				this.unloadSpawnChunks.setBoolean(world, config.getSource() != null && !config.isKeepSpawnInMemory());
+				this.unloadSpawnChunks.setBoolean(world, !config.isKeepSpawnInMemory() && !config.isKeepLoaded());
 			} catch (final IllegalAccessException e) {
 				System.err.println("[Ymir] Unable to set unloadSpawnChunks on the world " + config.getName() + ": " + e.getMessage());
 			}
