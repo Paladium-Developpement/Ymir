@@ -24,7 +24,8 @@ import net.minecraftforge.event.world.WorldEvent;
 
 public class YmirSourceListener {
 
-	private final Field keepSpawnInMemory = this.findKeepSpawnInMemory();
+	private final Field keepSpawnInMemory = this.findWorldField("keepSpawnInMemory");
+	private final Field unloadSpawnChunks = this.findWorldField("unloadSpawnChunks");
 	private final Field viewRadius = ReflectionHelper.findField(PlayerManager.class, "field_72698_e", "playerViewRadius");
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -45,7 +46,7 @@ public class YmirSourceListener {
 
 		final WorldServer world = (WorldServer) event.entity.worldObj;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
-			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).prefetch(event.newChunkX, event.newChunkZ, this.getViewRadius(world) + 2);
+			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).prefetch(event.newChunkX, event.newChunkZ, this.getViewRadius(world) + 1);
 		}
 	}
 
@@ -55,6 +56,14 @@ public class YmirSourceListener {
 				this.keepSpawnInMemory.setBoolean(world, config.isKeepSpawnInMemory());
 			} catch (final IllegalAccessException e) {
 				System.err.println("[Ymir] Unable to set keepSpawnInMemory on the world " + config.getName() + ": " + e.getMessage());
+			}
+		}
+
+		if (this.unloadSpawnChunks != null) {
+			try {
+				this.unloadSpawnChunks.setBoolean(world, config.getSource() != null && !config.isKeepSpawnInMemory());
+			} catch (final IllegalAccessException e) {
+				System.err.println("[Ymir] Unable to set unloadSpawnChunks on the world " + config.getName() + ": " + e.getMessage());
 			}
 		}
 
@@ -85,9 +94,9 @@ public class YmirSourceListener {
 		}
 	}
 
-	private Field findKeepSpawnInMemory() {
+	private Field findWorldField(final String name) {
 		try {
-			return World.class.getField("keepSpawnInMemory");
+			return World.class.getField(name);
 		} catch (final NoSuchFieldException e) {
 			return null;
 		}
