@@ -143,6 +143,17 @@ L'orientation des blocs vanilla est fournie (troncs, escaliers, lianes, torches,
 YmirBlockRotationRegistry.inst().register((metadata, rotation) -> metadata + rotation.getQuarters() & 3, MyBlocks.STATUE);
 ```
 
+### Limiter le monde à sa zone utile
+
+```java
+world.addBounds(YmirWorldBox.ofBlocks(minX, minZ, maxX, maxZ).expand(1));
+world.removeBounds(box);
+```
+
+Un monde Ymir peut se limiter à une zone faite d'une ou plusieurs boîtes de chunks : le serveur ne charge, ne génère, n'envoie et ne parcourt jamais un chunk hors de ces boîtes, quel que soit le rayon de vue, et les tickets de chargement, l'apparition des mobs et les entités n'y entrent pas (une entité qui y passe disparaît, un joueur est ramené à sa dernière position, `teleport` refuse une destination hors zone). Pour la lumière et le tick des entités, un chunk hors zone compte comme un chunk vide déjà chargé : le bord de la zone se comporte comme le reste du monde. Le rayon de vue peut donc monter sans charger le vide autour d'une grotte ou d'un labo.
+
+La zone se calcule seule à la création : pour un monde fait d'un `template`, ce sont les chunks du modèle qui contiennent au moins un bloc, une entité ou un bloc-entité (les chunks vides des fichiers de région ne comptent pas), plus une marge d'un chunk ; le calcul se fait une fois par modèle, hors du thread serveur, et se garde tant que les fichiers de région du modèle ne changent pas. Pour un monde `source` borné, ce sont les `bounds` de la source plus une marge d'un chunk. Des boîtes passées par `bounds` à la création remplacent ce calcul. Le chunk du spawn et ses voisins sont toujours dans la zone. Dans un monde fait d'un `template`, un chunk de cette zone absent du modèle (la marge comprise) n'est jamais généré par le générateur du monde : il est vide, quel que soit le type du monde, et l'on ne voit autour du modèle que ce qu'il contient ; les boîtes ajoutées ensuite par `addBounds` gardent le générateur du monde. `addBounds` et `removeBounds` changent la zone d'un monde déjà créé (salle collée puis retirée) : les chunks d'une boîte ajoutée se chargent et s'envoient tout de suite, ceux d'une boîte retirée sont retirés des joueurs et déchargés. Un monde sans aucune boîte n'a pas de limite. Il faut Asgard avec les zones de chunks ; sinon le monde charge tout ce qui est en vue et un avertissement s'affiche une fois.
+
 ### Suivre le cycle de vie
 
 ```java
@@ -181,6 +192,7 @@ Toutes se déclarent sur `YmirWorldConfig.create(nom)`.
 | `batchSave` | `false` | sort le monde de la sauvegarde automatique du serveur, qui écrit tous les chunks de tous les mondes dans le même tick : Ymir le sauvegarde toutes les 30 s par lots de 24 chunks par tick, un monde à la fois, et les chunks déchargés restent sauvegardés ; un monde vide qui attend sa suppression (`deleteAfter`) garde ses chunks en mémoire sans les sauvegarder ni les décharger, pour qu'une vague de déconnexions ne lance pas une salve d'écritures |
 | `template` | aucun | dossier copié au lieu de générer le monde |
 | `source` | aucune | carte lue à la demande, décalée, tournée et bornée, au lieu de générer le monde |
+| `bounds` | calculée | boîtes de chunks (`YmirWorldBox`) hors desquelles rien n'est chargé ni envoyé ; sans elles, la zone vient du modèle ou de la source |
 | `link` | aucun | dossier qui suit le monde, copié et supprimé avec lui, résolu depuis son nom |
 | `worldGuard` | `false` | copie la configuration WorldGuard du monde principal et charge les régions du nouveau monde |
 | `chat` | aucun | chat propre au monde et accès aux chats serveur et global, appliqués par PalaChats |

@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -13,6 +14,7 @@ import fr.paladium.ymir.internal.world.YmirWorldChunks;
 import fr.paladium.ymir.internal.world.YmirWorldDimensions;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
 import fr.paladium.ymir.internal.world.YmirWorldSaves;
+import fr.paladium.ymir.internal.world.YmirWorldZones;
 import fr.paladium.ymir.internal.world.backend.YmirWorldBackend;
 import fr.paladium.ymir.lib.event.YmirWorldEvent;
 import lombok.AccessLevel;
@@ -31,7 +33,8 @@ import net.minecraftforge.common.MinecraftForge;
 @Getter
 public final class YmirWorld {
 
-	private final YmirWorldConfig config;
+	private final YmirWorldConfig    config;
+	private final List<YmirWorldBox> bounds = new ArrayList<>();
 
 	private long        emptySince;
 	private WorldServer handle;
@@ -208,6 +211,11 @@ public final class YmirWorld {
 	}
 
 	public boolean teleport(final @NonNull EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {
+		if (!this.contains(MathHelper.floor_double(x) >> 4, MathHelper.floor_double(z) >> 4)) {
+			System.err.println("[Ymir] Refused to teleport " + player.getCommandSenderName() + " outside the zone of the world " + this.getName() + " (" + x + ", " + y + ", " + z + ")");
+			return false;
+		}
+
 		final boolean teleported = YmirWorldBackend.get().teleport(this.load(), player, x, y, z, yaw, pitch);
 		if (teleported && player.worldObj == this.handle) {
 			this.relocate(player);
@@ -233,6 +241,29 @@ public final class YmirWorld {
 		return YmirWorldChunks.preload(this.require(), chunks);
 	}
 
+	public @NonNull YmirWorld addBounds(final @NonNull YmirWorldBox box) {
+		this.bounds.add(box);
+		if (this.isLoaded()) {
+			YmirWorldZones.add(this.handle, box);
+		}
+		return this;
+	}
+
+	public @NonNull YmirWorld removeBounds(final @NonNull YmirWorldBox box) {
+		if (this.bounds.remove(box) && this.isLoaded()) {
+			YmirWorldZones.remove(this.handle, box);
+		}
+		return this;
+	}
+
+	public boolean contains(final int chunkX, final int chunkZ) {
+		return this.bounds.isEmpty() || this.bounds.stream().anyMatch(box -> box.contains(chunkX, chunkZ));
+	}
+
+	public @NonNull List<YmirWorldBox> getBounds() {
+		return Collections.unmodifiableList(this.bounds);
+	}
+
 	public @NonNull YmirWorld setSpawn(final int x, final int y, final int z) {
 		YmirWorldBackend.get().setSpawn(this.require(), x, y, z);
 		return this;
@@ -252,6 +283,7 @@ public final class YmirWorld {
 			YmirWorldFiles.await(this.getName());
 			this.fresh = !Ymir.exists(this.getName());
 			YmirWorldFiles.prepare(this.config);
+			this.bounds.addAll(YmirWorldZones.resolve(this.config));
 			YmirWorldFiles.reset(this.getDirectory(), this.config);
 			this.reset = true;
 			this.prepared = true;

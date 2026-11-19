@@ -8,14 +8,18 @@ import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.ReflectionHelper;
 import fr.paladium.ymir.internal.world.YmirChunkLoader;
+import fr.paladium.ymir.internal.world.YmirTemplateChunkProvider;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
+import fr.paladium.ymir.internal.world.YmirWorldZones;
 import fr.paladium.ymir.internal.world.source.YmirSourceChunkProvider;
 import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
+import fr.paladium.ymir.lib.YmirWorldBox;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.PlayerManager;
+import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.storage.AnvilChunkLoader;
@@ -35,7 +39,10 @@ public class YmirSourceListener {
 		}
 
 		final WorldServer world = (WorldServer) event.world;
-		Ymir.get(world.getWorldInfo().getWorldName()).map(YmirWorld::getConfig).ifPresent(config -> this.load(world, config));
+		Ymir.get(world.getWorldInfo().getWorldName()).ifPresent(ymirWorld -> {
+			this.load(world, ymirWorld.getConfig());
+			this.zone(world, ymirWorld);
+		});
 	}
 
 	@SubscribeEvent
@@ -74,6 +81,21 @@ public class YmirSourceListener {
 		if (world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
 			final File directory = ((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation;
 			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, this.getTemplate(config, directory), config.isTemporary());
+		}
+	}
+
+	private void zone(final WorldServer world, final YmirWorld ymirWorld) {
+		if (ymirWorld.getBounds().isEmpty()) {
+			return;
+		}
+
+		final ChunkCoordinates spawn = world.getSpawnPoint();
+		if (!ymirWorld.contains(spawn.posX >> 4, spawn.posZ >> 4)) {
+			ymirWorld.addBounds(YmirWorldBox.ofBlocks(spawn.posX, spawn.posZ, spawn.posX, spawn.posZ).expand(1));
+		}
+		ymirWorld.getBounds().forEach(box -> YmirWorldZones.add(world, box));
+		if (ymirWorld.getConfig().getTemplate() != null) {
+			world.theChunkProviderServer.currentChunkProvider = new YmirTemplateChunkProvider(world, world.theChunkProviderServer.currentChunkProvider, ymirWorld.getBounds());
 		}
 	}
 

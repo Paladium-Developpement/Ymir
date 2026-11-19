@@ -3,6 +3,8 @@ package fr.paladium.ymir.lib;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,7 @@ public class YmirWorldConfig {
 	private YmirWorldTab     tab;
 	private YmirWorldChat    chat;
 
+	private final List<YmirWorldBox>           bounds = new ArrayList<>();
 	private final List<Function<String, File>> linked = new ArrayList<>();
 	private final Map<String, String>          gamerules = new LinkedHashMap<>();
 
@@ -93,6 +96,7 @@ public class YmirWorldConfig {
 		config.keepLoaded = this.keepLoaded;
 		config.tab = this.tab;
 		config.chat = this.chat;
+		config.bounds.addAll(this.bounds);
 		config.linked.addAll(this.linked);
 		config.gamerules.putAll(this.gamerules);
 		return config;
@@ -183,6 +187,11 @@ public class YmirWorldConfig {
 		return (C) this;
 	}
 
+	public final @NonNull <C extends YmirWorldConfig> C bounds(final @NonNull YmirWorldBox... boxes) {
+		this.bounds.addAll(Arrays.asList(boxes));
+		return (C) this;
+	}
+
 	public final @NonNull <C extends YmirWorldConfig> C type(final @NonNull YmirWorldType type) {
 		this.type = type;
 		return (C) this;
@@ -241,6 +250,10 @@ public class YmirWorldConfig {
 	public final @NonNull <C extends YmirWorldConfig> C gamerule(final @NonNull String key, final @NonNull String value) {
 		this.gamerules.put(key, value);
 		return (C) this;
+	}
+
+	public @NonNull List<YmirWorldBox> getBounds() {
+		return Collections.unmodifiableList(this.bounds);
 	}
 
 }
