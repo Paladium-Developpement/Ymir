@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import fr.paladium.ymir.internal.world.region.YmirRegionCache;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.MinecraftException;
 import net.minecraft.world.World;
@@ -19,6 +20,7 @@ import net.minecraft.world.storage.ThreadedFileIOBase;
 public class YmirChunkLoader extends AnvilChunkLoader {
 
 	private final File    template;
+	private final int[]   blocks;
 	private final boolean memory;
 
 	private final Map<Long, NBTTagCompound>              chunks = new ConcurrentHashMap<>();
@@ -27,9 +29,10 @@ public class YmirChunkLoader extends AnvilChunkLoader {
 
 	private int failures;
 
-	public YmirChunkLoader(final File directory, final File template, final boolean memory) {
+	public YmirChunkLoader(final File directory, final File template, final int[] blocks, final boolean memory) {
 		super(directory);
 		this.template = template;
+		this.blocks = blocks;
 		this.memory = memory;
 	}
 
@@ -116,7 +119,18 @@ public class YmirChunkLoader extends AnvilChunkLoader {
 		}
 
 		final Optional<File> region = this.getRegion(x, z);
-		return region.isPresent() ? YmirRegionCache.inst().read(region.get(), x, z, !this.memory).orElse(null) : null;
+		if (!region.isPresent()) {
+			return null;
+		}
+
+		final NBTTagCompound tag = YmirRegionCache.inst().read(region.get(), x, z, !this.memory).orElse(null);
+		if (tag != null && this.blocks != null && region.get().toPath().startsWith(this.template.toPath())) {
+			final NBTTagList sections = tag.getCompoundTag("Level").getTagList("Sections", 10);
+			for (int index = 0; index < sections.tagCount(); index++) {
+				YmirBlockIdRegistry.inst().convert(sections.getCompoundTagAt(index), this.blocks);
+			}
+		}
+		return tag;
 	}
 
 	private boolean write(final ChunkCoordIntPair coordinates, final NBTTagCompound tag) {

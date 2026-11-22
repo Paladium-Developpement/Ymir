@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import cpw.mods.fml.relauncher.ReflectionHelper;
+import fr.paladium.ymir.internal.world.YmirBlockIdRegistry;
 import fr.paladium.ymir.internal.world.region.YmirRegionCache;
 import fr.paladium.ymir.lib.YmirBlockRotationRegistry;
 import fr.paladium.ymir.lib.YmirWorldRotation;
@@ -72,7 +73,7 @@ public final class YmirSourceReader {
 	private YmirSourceChunk convert(final NBTTagCompound level, final YmirWorldSource source, final boolean sky) {
 		final YmirWorldRotation rotation = source.getRotation();
 		final int[] permutation = rotation == YmirWorldRotation.NONE ? null : this.permutations[rotation.getQuarters()];
-		final int[] ids = YmirSourceRegistry.inst().getBlocks(source.getDirectory());
+		final int[] ids = YmirBlockIdRegistry.inst().getBlocks(source.getDirectory()).orElse(null);
 		final int[] flags = this.getBlockFlags();
 		final ExtendedBlockStorage[] storages = new ExtendedBlockStorage[16];
 		final NBTTagList sections = level.getTagList("Sections", 10);
@@ -97,19 +98,17 @@ public final class YmirSourceReader {
 	}
 
 	private ExtendedBlockStorage convert(final NBTTagCompound section, final int y, final boolean sky, final int[] ids, final int[] flags, final YmirWorldRotation rotation, final int[] permutation) {
+		if (ids != null) {
+			YmirBlockIdRegistry.inst().convert(section, ids);
+		}
+
 		final ExtendedBlockStorage storage = new ExtendedBlockStorage(y << 4, sky);
-		final byte[] sourceBlocks = section.getByteArray("Blocks");
-		final byte[] sourceAdd = section.hasKey("Add", 7) ? section.getByteArray("Add") : null;
-		final byte[] blocks = new byte[4096];
-		final byte[] add = new byte[2048];
-		boolean high = false;
+		final byte[] blocks = section.getByteArray("Blocks");
+		final byte[] add = section.hasKey("Add", 7) ? section.getByteArray("Add") : null;
 		int blockRefs = 0;
 		int tickRefs = 0;
 		for (int index = 0; index < 4096; index++) {
-			final int id = ids[sourceBlocks[index] & 255 | (sourceAdd == null ? 0 : this.get(sourceAdd, index) << 8)];
-			blocks[index] = (byte) id;
-			this.set(add, index, id >> 8);
-			high |= id > 255;
+			final int id = blocks[index] & 255 | (add == null ? 0 : this.get(add, index) << 8);
 			blockRefs += flags[id] & 1;
 			tickRefs += flags[id] >> 1;
 		}
@@ -117,7 +116,7 @@ public final class YmirSourceReader {
 		storage.setBlockMetadataArray(this.rotate(blocks, add, section.getByteArray("Data"), rotation, permutation));
 		storage.setBlocklightArray(this.permuteNibbles(section.getByteArray("BlockLight"), permutation));
 		storage.setBlockLSBArray(this.permute(blocks, permutation));
-		if (high) {
+		if (add != null) {
 			storage.setBlockMSBArray(this.permuteNibbles(add, permutation));
 		}
 
@@ -153,7 +152,7 @@ public final class YmirSourceReader {
 
 		final byte[] rotated = new byte[data.length];
 		for (int index = 0; index < 4096; index++) {
-			final int id = blocks[index] & 255 | this.get(add, index) << 8;
+			final int id = blocks[index] & 255 | (add == null ? 0 : this.get(add, index) << 8);
 			this.set(rotated, permutation[index], YmirBlockRotationRegistry.inst().rotate(id, this.get(data, index), rotation));
 		}
 		return new NibbleArray(rotated, 4);

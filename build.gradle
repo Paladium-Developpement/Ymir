@@ -60,6 +60,8 @@ dependencies {
     compile "org.projectlombok:lombok:1.18.22"
 
     compile "fr.paladium:palaforge-utils:+:dev"
+
+    testCompile "junit:junit:4.12"
 }
 
 /* Utils */

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.ReflectionHelper;
+import fr.paladium.ymir.internal.world.YmirBlockIdRegistry;
 import fr.paladium.ymir.internal.world.YmirChunkLoader;
 import fr.paladium.ymir.internal.world.YmirTemplateChunkProvider;
 import fr.paladium.ymir.internal.world.YmirWorldFiles;
@@ -80,7 +81,9 @@ public class YmirSourceListener {
 
 		if (world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
 			final File directory = ((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation;
-			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, this.getTemplate(config, directory), config.isTemporary());
+			final File template = this.getTemplate(config, directory);
+			final int[] blocks = template == null ? null : YmirBlockIdRegistry.inst().getBlocks(config.getTemplate()).orElse(null);
+			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, template, blocks, config.isTemporary());
 		}
 	}
 
