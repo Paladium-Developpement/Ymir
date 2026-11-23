@@ -22,6 +22,7 @@ public class YmirChunkLoader extends AnvilChunkLoader {
 	private final File    template;
 	private final int[]   blocks;
 	private final boolean memory;
+	private final boolean discard;
 
 	private final Map<Long, NBTTagCompound>              chunks = new ConcurrentHashMap<>();
 	private final Map<Long, Optional<File>>              regions = new ConcurrentHashMap<>();
@@ -29,11 +30,12 @@ public class YmirChunkLoader extends AnvilChunkLoader {
 
 	private int failures;
 
-	public YmirChunkLoader(final File directory, final File template, final int[] blocks, final boolean memory) {
+	public YmirChunkLoader(final File directory, final File template, final int[] blocks, final boolean memory, final boolean discard) {
 		super(directory);
 		this.template = template;
 		this.blocks = blocks;
 		this.memory = memory;
+		this.discard = discard;
 	}
 
 	@Override
@@ -59,6 +61,10 @@ public class YmirChunkLoader extends AnvilChunkLoader {
 
 	@Override
 	public void saveChunk(final World world, final Chunk chunk) throws MinecraftException, IOException {
+		if (this.discard) {
+			return;
+		}
+
 		if (!this.memory || chunk.isModified || chunk.hasEntities || this.chunks.containsKey(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition))) {
 			super.saveChunk(world, chunk);
 		}

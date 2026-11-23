@@ -83,7 +83,7 @@ public class YmirSourceListener {
 			final File directory = ((AnvilChunkLoader) world.theChunkProviderServer.currentChunkLoader).chunkSaveLocation;
 			final File template = this.getTemplate(config, directory);
 			final int[] blocks = template == null ? null : YmirBlockIdRegistry.inst().getBlocks(config.getTemplate()).orElse(null);
-			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, template, blocks, config.isTemporary());
+			world.theChunkProviderServer.currentChunkLoader = new YmirChunkLoader(directory, template, blocks, config.isTemporary(), config.isTemporary() && config.isVolatileChunks());
 		}
 	}
 
