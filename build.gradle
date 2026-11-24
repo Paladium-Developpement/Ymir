@@ -65,12 +65,12 @@ dependencies {
 }
 
 /* Utils */
-version = "1.15.0"
+version = "1.15.1"
 group = "fr.paladium.ymir"
 archivesBaseName = "ymir"
 
 task updateVersion() {
-    project.version = "1.15.0"
+    project.version = "1.15.1"
 }
 
 build.dependsOn updateVersion
