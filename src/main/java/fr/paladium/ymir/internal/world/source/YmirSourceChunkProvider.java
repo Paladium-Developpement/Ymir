@@ -17,11 +17,14 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.IProgressUpdate;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.SpawnerAnimals;
@@ -35,6 +38,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 	private final WorldServer world;
 	private final YmirWorldSource source;
+	private final Set<Long> visited = new HashSet<>();
 	private final Set<Long> generated = new HashSet<>();
 	private final Map<Long, CompletableFuture<Optional<YmirSourceChunk>>> prefetched = new ConcurrentHashMap<>();
 
@@ -129,19 +133,21 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 	}
 
 	public void spawnCreatures(final Chunk chunk) {
-		if (!this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition)) || !this.world.getGameRules().getGameRuleBooleanValue("doMobSpawning")) {
-			return;
+		final int view = MinecraftServer.getServer().getConfigurationManager().getViewDistance();
+		if (this.isWatched(chunk.xPosition, chunk.zPosition, view)) {
+			this.populate(chunk.xPosition, chunk.zPosition, view);
 		}
+	}
 
-		final int limit = Ymir.get(this.world).map(YmirWorldBackend.get()::getAnimalSpawnLimit).orElse(0);
-		final int view = MinecraftServer.getServer().getConfigurationManager().getViewDistance() * 2 + 1;
-		if (this.world.countEntities(EntityAnimal.class) >= limit * Math.max(1, this.world.playerEntities.size()) * view * view / 256) {
-			return;
+	public void spawnCreatures(final int centerX, final int centerZ) {
+		final int view = MinecraftServer.getServer().getConfigurationManager().getViewDistance();
+		for (int x = centerX - view; x <= centerX + view; x++) {
+			for (int z = centerZ - view; z <= centerZ + view; z++) {
+				if (this.generated.contains(ChunkCoordIntPair.chunkXZ2Int(x, z)) && this.world.theChunkProviderServer.chunkExists(x, z)) {
+					this.populate(x, z, view);
+				}
+			}
 		}
-
-		final int x = chunk.xPosition << 4;
-		final int z = chunk.zPosition << 4;
-		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
 	}
 
 	public void release() {
@@ -151,6 +157,51 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 	public boolean isPrefetched(final int x, final int z) {
 		final CompletableFuture<Optional<YmirSourceChunk>> prefetch = this.prefetched.get(ChunkCoordIntPair.chunkXZ2Int(x, z));
 		return prefetch == null || prefetch.isDone();
+	}
+
+	private boolean isWatched(final int chunkX, final int chunkZ, final int radius) {
+		if (this.world.playerEntities.isEmpty()) {
+			final ChunkCoordinates spawn = this.world.getSpawnPoint();
+			return Math.abs((spawn.posX >> 4) - chunkX) <= radius && Math.abs((spawn.posZ >> 4) - chunkZ) <= radius;
+		}
+
+		for (final Object entity : this.world.playerEntities) {
+			final EntityPlayer player = (EntityPlayer) entity;
+			if (Math.abs((MathHelper.floor_double(player.posX) >> 4) - chunkX) <= radius && Math.abs((MathHelper.floor_double(player.posZ) >> 4) - chunkZ) <= radius) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void populate(final int chunkX, final int chunkZ, final int radius) {
+		if (!this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunkX, chunkZ)) || !this.world.getGameRules().getGameRuleBooleanValue("doMobSpawning")) {
+			return;
+		}
+
+		final int limit = Ymir.get(this.world).map(YmirWorldBackend.get()::getAnimalSpawnLimit).orElse(0) * (radius * 2 + 1) * (radius * 2 + 1) / 256;
+		if (this.countAnimals(chunkX, chunkZ, radius) >= limit) {
+			return;
+		}
+
+		final int x = chunkX << 4;
+		final int z = chunkZ << 4;
+		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
+	}
+
+	private int countAnimals(final int chunkX, final int chunkZ, final int radius) {
+		int count = 0;
+		for (final Object entity : this.world.loadedEntityList) {
+			if (!(entity instanceof EntityAnimal)) {
+				continue;
+			}
+
+			final EntityAnimal animal = (EntityAnimal) entity;
+			if (Math.abs((MathHelper.floor_double(animal.posX) >> 4) - chunkX) <= radius && Math.abs((MathHelper.floor_double(animal.posZ) >> 4) - chunkZ) <= radius) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private Chunk empty(final int x, final int z) {
@@ -173,7 +224,9 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		chunk.isLightPopulated = true;
 		this.entities(chunk, source.getEntities());
 		this.tileEntities(chunk, source.getTileEntities());
-		this.generated.add(ChunkCoordIntPair.chunkXZ2Int(x, z));
+		if (this.visited.add(ChunkCoordIntPair.chunkXZ2Int(x, z))) {
+			this.generated.add(ChunkCoordIntPair.chunkXZ2Int(x, z));
+		}
 		return chunk;
 	}
 
