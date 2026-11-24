@@ -15,6 +15,7 @@ public interface IYmirWorldBackend {
 	public void save(final YmirWorld world);
 	public void connect(final NetworkManager manager, final EntityPlayerMP player);
 	public World getBukkitWorld(final YmirWorld world);
+	public int getAnimalSpawnLimit(final YmirWorld world);
 	public void setSpawn(final YmirWorld world, final int x, final int y, final int z);
 	public boolean teleport(final YmirWorld world, final EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch);
 

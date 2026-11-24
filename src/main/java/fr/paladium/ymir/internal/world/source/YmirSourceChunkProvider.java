@@ -1,23 +1,30 @@
 package fr.paladium.ymir.internal.world.source;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import fr.paladium.ymir.internal.world.backend.YmirWorldBackend;
+import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorldSource;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IProgressUpdate;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.SpawnerAnimals;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
@@ -28,6 +35,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 	private final WorldServer world;
 	private final YmirWorldSource source;
+	private final Set<Long> generated = new HashSet<>();
 	private final Map<Long, CompletableFuture<Optional<YmirSourceChunk>>> prefetched = new ConcurrentHashMap<>();
 
 	@Override
@@ -120,6 +128,22 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		}
 	}
 
+	public void spawnCreatures(final Chunk chunk) {
+		if (!this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition)) || !this.world.getGameRules().getGameRuleBooleanValue("doMobSpawning")) {
+			return;
+		}
+
+		final int limit = Ymir.get(this.world).map(YmirWorldBackend.get()::getAnimalSpawnLimit).orElse(0);
+		final int view = MinecraftServer.getServer().getConfigurationManager().getViewDistance() * 2 + 1;
+		if (this.world.countEntities(EntityAnimal.class) >= limit * Math.max(1, this.world.playerEntities.size()) * view * view / 256) {
+			return;
+		}
+
+		final int x = chunk.xPosition << 4;
+		final int z = chunk.zPosition << 4;
+		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
+	}
+
 	public void release() {
 		this.source.release();
 	}
@@ -149,6 +173,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		chunk.isLightPopulated = true;
 		this.entities(chunk, source.getEntities());
 		this.tileEntities(chunk, source.getTileEntities());
+		this.generated.add(ChunkCoordIntPair.chunkXZ2Int(x, z));
 		return chunk;
 	}
 

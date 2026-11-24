@@ -25,6 +25,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.storage.AnvilChunkLoader;
 import net.minecraftforge.event.entity.EntityEvent.EnteringChunk;
+import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
 
 public class YmirSourceListener {
@@ -55,6 +56,18 @@ public class YmirSourceListener {
 		final WorldServer world = (WorldServer) event.entity.worldObj;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
 			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).prefetch(event.newChunkX, event.newChunkZ, this.getViewRadius(world) + 1);
+		}
+	}
+
+	@SubscribeEvent
+	public void onChunkLoad(final ChunkEvent.Load event) {
+		if (!(event.world instanceof WorldServer)) {
+			return;
+		}
+
+		final WorldServer world = (WorldServer) event.world;
+		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
+			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).spawnCreatures(event.getChunk());
 		}
 	}
 

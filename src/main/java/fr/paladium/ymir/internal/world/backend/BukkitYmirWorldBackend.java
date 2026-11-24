@@ -15,6 +15,7 @@ import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.world.WorldServer;
@@ -67,6 +68,12 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 	@Override
 	public World getBukkitWorld(final YmirWorld world) {
 		return Bukkit.getWorld(world.getName());
+	}
+
+	@Override
+	public int getAnimalSpawnLimit(final YmirWorld world) {
+		final World bukkitWorld = this.getBukkitWorld(world);
+		return bukkitWorld == null ? EnumCreatureType.creature.getMaxNumberOfCreature() : bukkitWorld.getAnimalSpawnLimit();
 	}
 
 	@Override
