@@ -207,7 +207,7 @@ public final class YmirWorld {
 
 	public boolean teleport(final @NonNull EntityPlayerMP player) {
 		final ChunkCoordinates spawn = this.load().handle.getSpawnPoint();
-		return this.teleport(player, spawn.posX + 0.5D, spawn.posY, spawn.posZ + 0.5D, player.rotationYaw, player.rotationPitch);
+		return this.teleport(player, spawn.posX + 0.5D, spawn.posY, spawn.posZ + 0.5D, YmirWorldBackend.get().getSpawnYaw(this), YmirWorldBackend.get().getSpawnPitch(this));
 	}
 
 	public boolean teleport(final @NonNull EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {

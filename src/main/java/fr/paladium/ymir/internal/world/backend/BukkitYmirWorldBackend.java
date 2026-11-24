@@ -70,6 +70,16 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 	}
 
 	@Override
+	public float getSpawnYaw(final YmirWorld world) {
+		return this.getBukkitWorld(world).getSpawnLocation().getYaw();
+	}
+
+	@Override
+	public float getSpawnPitch(final YmirWorld world) {
+		return this.getBukkitWorld(world).getSpawnLocation().getPitch();
+	}
+
+	@Override
 	public void setSpawn(final YmirWorld world, final int x, final int y, final int z) {
 		this.getBukkitWorld(world).setSpawnLocation(x, y, z);
 	}

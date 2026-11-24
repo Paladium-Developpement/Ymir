@@ -133,6 +133,16 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 	}
 
 	@Override
+	public float getSpawnYaw(final YmirWorld world) {
+		return 0F;
+	}
+
+	@Override
+	public float getSpawnPitch(final YmirWorld world) {
+		return 0F;
+	}
+
+	@Override
 	public void setSpawn(final YmirWorld world, final int x, final int y, final int z) {
 		world.getHandle().setSpawnLocation(x, y, z);
 	}
