@@ -23,7 +23,6 @@ import fr.paladium.ymir.lib.Ymir;
 import fr.paladium.ymir.lib.YmirWorld;
 import fr.paladium.ymir.lib.YmirWorldConfig;
 import fr.paladium.ymir.lib.YmirWorldException;
-import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
@@ -131,11 +130,6 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 	@Override
 	public World getBukkitWorld(final YmirWorld world) {
 		return null;
-	}
-
-	@Override
-	public int getAnimalSpawnLimit(final YmirWorld world) {
-		return EnumCreatureType.creature.getMaxNumberOfCreature();
 	}
 
 	@Override

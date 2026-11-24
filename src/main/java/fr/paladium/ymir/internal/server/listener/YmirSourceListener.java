@@ -56,7 +56,6 @@ public class YmirSourceListener {
 		final WorldServer world = (WorldServer) event.entity.worldObj;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
 			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).prefetch(event.newChunkX, event.newChunkZ, this.getViewRadius(world) + 1);
-			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).spawnCreatures(event.newChunkX, event.newChunkZ);
 		}
 	}
 
