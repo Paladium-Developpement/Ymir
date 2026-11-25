@@ -113,7 +113,7 @@ Les blocs du modèle gardent leur nature même si les identifiants numériques o
 world.preload(chunkX, chunkZ, 2).thenAccept(loaded -> loaded.teleport(player, x, y, z, yaw, pitch));
 ```
 
-Les chunks demandés se chargent dans un budget de 5 ms et 64 chargements faits sur le thread serveur par tick, partagé par tous les mondes et monde après monde, dans l'ordre des demandes : le premier arrivé n'attend pas les suivants. Ils viennent depuis le disque en arrière-plan quand ils existent, et ces lectures ne consomment pas le budget : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur.
+Les chunks demandés se chargent dans un budget de 5 ms et 64 chargements faits sur le thread serveur par tick, partagé par tous les mondes et monde après monde, dans l'ordre des demandes : le premier arrivé n'attend pas les suivants. Ils viennent depuis le disque en arrière-plan quand ils existent, et ces lectures ne consomment pas le budget : le joueur arrive dans une zone déjà chargée, sans gel du serveur. Dans un monde source, les chunks préchargés sont lus, décompressés et tournés en arrière-plan, et passent devant la file de génération du serveur. Sous Asgard (≥ `7f44c815`), tous les chunks que la file de génération demande, la vue lointaine comprise, sont lus de la même façon en arrière-plan avant d'être générés (quatre ticks de budget de génération lus d'avance au plus, le plus proche du joueur d'abord) : la génération sur le thread serveur ne fait que convertir des données prêtes, et une lecture que plus personne ne regarde est abandonnée.
 
 ### Lire une carte source
 

@@ -3,6 +3,7 @@ package fr.paladium.ymir.internal.server.listener;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.function.LongPredicate;
 
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -24,15 +25,17 @@ import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.storage.AnvilChunkLoader;
+import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraftforge.event.entity.EntityEvent.EnteringChunk;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
 
 public class YmirSourceListener {
 
-	private final Field keepSpawnInMemory = this.findWorldField("keepSpawnInMemory");
-	private final Field unloadSpawnChunks = this.findWorldField("unloadSpawnChunks");
+	private final Field keepSpawnInMemory = this.findField(World.class, "keepSpawnInMemory");
+	private final Field unloadSpawnChunks = this.findField(World.class, "unloadSpawnChunks");
 	private final Field viewRadius = ReflectionHelper.findField(PlayerManager.class, "field_72698_e", "playerViewRadius");
+	private final Field generationPrepared = this.findField(ChunkProviderServer.class, "generationPrepared");
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
 	public void onLoad(final WorldEvent.Load event) {
@@ -70,7 +73,9 @@ public class YmirSourceListener {
 
 		final WorldServer world = (WorldServer) event.world;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
-			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).spawnCreatures(event.getChunk(), this.getViewRadius(world));
+			final YmirSourceChunkProvider provider = (YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider;
+			provider.discard(event.getChunk());
+			provider.spawnCreatures(event.getChunk(), this.getViewRadius(world));
 		}
 	}
 
@@ -104,7 +109,15 @@ public class YmirSourceListener {
 		}
 
 		if (config.getSource() != null) {
-			world.theChunkProviderServer.currentChunkProvider = new YmirSourceChunkProvider(world, config.getSource());
+			final YmirSourceChunkProvider provider = new YmirSourceChunkProvider(world, config.getSource());
+			world.theChunkProviderServer.currentChunkProvider = provider;
+			if (this.generationPrepared != null) {
+				try {
+					this.generationPrepared.set(world.theChunkProviderServer, (LongPredicate) provider::prepare);
+				} catch (final IllegalAccessException e) {
+					System.err.println("[Ymir] Unable to set generationPrepared on the world " + config.getName() + ": " + e.getMessage());
+				}
+			}
 		}
 
 		if (world.theChunkProviderServer.currentChunkLoader instanceof AnvilChunkLoader) {
@@ -147,9 +160,9 @@ public class YmirSourceListener {
 		}
 	}
 
-	private Field findWorldField(final String name) {
+	private Field findField(final Class<?> type, final String name) {
 		try {
-			return World.class.getField(name);
+			return type.getField(name);
 		} catch (final NoSuchFieldException e) {
 			return null;
 		}

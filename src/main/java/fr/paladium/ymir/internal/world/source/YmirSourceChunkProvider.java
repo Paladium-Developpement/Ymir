@@ -113,7 +113,7 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		while (iterator.hasNext()) {
 			final Map.Entry<Long, CompletableFuture<Optional<YmirSourceChunk>>> entry = iterator.next();
 			final long key = entry.getKey();
-			if (Math.max(Math.abs((int) key - centerX), Math.abs((int) (key >> 32) - centerZ)) > radius) {
+			if (Math.max(Math.abs((int) key - centerX), Math.abs((int) (key >> 32) - centerZ)) > radius && !this.world.getPlayerManager().func_152621_a((int) key, (int) (key >> 32))) {
 				entry.getValue().cancel(false);
 				iterator.remove();
 			}
@@ -126,6 +126,22 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		}
 	}
 
+	public boolean prepare(final long key) {
+		final int x = (int) key;
+		final int z = (int) (key >> 32);
+		final CompletableFuture<Optional<YmirSourceChunk>> prefetch = this.prefetched.get(key);
+		if (prefetch != null) {
+			return prefetch.isDone();
+		}
+
+		if (!this.source.contains(x, z) || this.world.theChunkProviderServer.chunkExists(x, z)) {
+			return true;
+		}
+
+		this.prefetch(x, z);
+		return false;
+	}
+
 	public void spawnCreatures(final int centerX, final int centerZ, final int radius) {
 		for (int x = centerX - radius; x <= centerX + radius; x++) {
 			for (int z = centerZ - radius; z <= centerZ + radius; z++) {
@@ -133,6 +149,13 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 					this.spawnCreatures(this.world.getChunkFromChunkCoords(x, z));
 				}
 			}
+		}
+	}
+
+	public void discard(final Chunk chunk) {
+		final CompletableFuture<Optional<YmirSourceChunk>> prefetch = this.prefetched.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition));
+		if (prefetch != null) {
+			prefetch.cancel(false);
 		}
 	}
 
