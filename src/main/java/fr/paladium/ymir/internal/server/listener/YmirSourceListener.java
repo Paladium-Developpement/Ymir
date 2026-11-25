@@ -55,7 +55,10 @@ public class YmirSourceListener {
 
 		final WorldServer world = (WorldServer) event.entity.worldObj;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
-			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).prefetch(event.newChunkX, event.newChunkZ, this.getViewRadius(world) + 1);
+			final YmirSourceChunkProvider provider = (YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider;
+			final int radius = this.getViewRadius(world);
+			provider.prefetch(event.newChunkX, event.newChunkZ, radius + 1);
+			provider.spawnCreatures(event.newChunkX, event.newChunkZ, radius);
 		}
 	}
 
@@ -67,7 +70,19 @@ public class YmirSourceListener {
 
 		final WorldServer world = (WorldServer) event.world;
 		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
-			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).spawnCreatures(event.getChunk());
+			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).spawnCreatures(event.getChunk(), this.getViewRadius(world));
+		}
+	}
+
+	@SubscribeEvent
+	public void onChunkUnload(final ChunkEvent.Unload event) {
+		if (!(event.world instanceof WorldServer)) {
+			return;
+		}
+
+		final WorldServer world = (WorldServer) event.world;
+		if (world.theChunkProviderServer.currentChunkProvider instanceof YmirSourceChunkProvider) {
+			((YmirSourceChunkProvider) world.theChunkProviderServer.currentChunkProvider).forget(event.getChunk());
 		}
 	}
 

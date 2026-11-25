@@ -14,10 +14,12 @@ import lombok.RequiredArgsConstructor;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IProgressUpdate;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.SpawnerAnimals;
@@ -124,14 +126,28 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 		}
 	}
 
-	public void spawnCreatures(final Chunk chunk) {
-		if (!this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition))) {
-			return;
+	public void spawnCreatures(final int centerX, final int centerZ, final int radius) {
+		for (int x = centerX - radius; x <= centerX + radius; x++) {
+			for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+				if (this.generated.contains(ChunkCoordIntPair.chunkXZ2Int(x, z)) && this.world.theChunkProviderServer.chunkExists(x, z)) {
+					this.spawnCreatures(this.world.getChunkFromChunkCoords(x, z));
+				}
+			}
 		}
+	}
 
-		final int x = chunk.xPosition << 4;
-		final int z = chunk.zPosition << 4;
-		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
+	public void spawnCreatures(final Chunk chunk, final int radius) {
+		for (final Object object : this.world.playerEntities) {
+			final EntityPlayer player = (EntityPlayer) object;
+			if (Math.abs(chunk.xPosition - (MathHelper.floor_double(player.posX) >> 4)) <= radius && Math.abs(chunk.zPosition - (MathHelper.floor_double(player.posZ) >> 4)) <= radius) {
+				this.spawnCreatures(chunk);
+				return;
+			}
+		}
+	}
+
+	public void forget(final Chunk chunk) {
+		this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition));
 	}
 
 	public void release() {
@@ -141,6 +157,16 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 	public boolean isPrefetched(final int x, final int z) {
 		final CompletableFuture<Optional<YmirSourceChunk>> prefetch = this.prefetched.get(ChunkCoordIntPair.chunkXZ2Int(x, z));
 		return prefetch == null || prefetch.isDone();
+	}
+
+	private void spawnCreatures(final Chunk chunk) {
+		if (!this.generated.remove(ChunkCoordIntPair.chunkXZ2Int(chunk.xPosition, chunk.zPosition))) {
+			return;
+		}
+
+		final int x = chunk.xPosition << 4;
+		final int z = chunk.zPosition << 4;
+		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
 	}
 
 	private Chunk empty(final int x, final int z) {
