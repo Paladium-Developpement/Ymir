@@ -34,6 +34,7 @@ public class YmirSourceListener {
 
 	private final Field keepSpawnInMemory = this.findField(World.class, "keepSpawnInMemory");
 	private final Field unloadSpawnChunks = this.findField(World.class, "unloadSpawnChunks");
+	private final Field unloadModifiedViewChunks = this.findField(World.class, "unloadModifiedViewChunks");
 	private final Field viewRadius = ReflectionHelper.findField(PlayerManager.class, "field_72698_e", "playerViewRadius");
 	private final Field generationPrepared = this.findField(ChunkProviderServer.class, "generationPrepared");
 
@@ -105,6 +106,14 @@ public class YmirSourceListener {
 				this.unloadSpawnChunks.setBoolean(world, !config.isKeepSpawnInMemory() && !config.isKeepLoaded());
 			} catch (final IllegalAccessException e) {
 				System.err.println("[Ymir] Unable to set unloadSpawnChunks on the world " + config.getName() + ": " + e.getMessage());
+			}
+		}
+
+		if (this.unloadModifiedViewChunks != null) {
+			try {
+				this.unloadModifiedViewChunks.setBoolean(world, config.isTemporary() && !config.isVolatileChunks());
+			} catch (final IllegalAccessException e) {
+				System.err.println("[Ymir] Unable to set unloadModifiedViewChunks on the world " + config.getName() + ": " + e.getMessage());
 			}
 		}
 
