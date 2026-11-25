@@ -26,7 +26,7 @@ public final class YmirSourceReader {
 
 	private static final YmirSourceReader INSTANCE = new YmirSourceReader();
 
-	private final int[][] permutations = new int[4][4096];
+	private final int[][] sources = new int[4][4096];
 	private final Field tickRefCount = ReflectionHelper.findField(ExtendedBlockStorage.class, "field_76683_c", "tickRefCount");
 	private final Field blockRefCount = ReflectionHelper.findField(ExtendedBlockStorage.class, "field_76682_b", "blockRefCount");
 	private final ExecutorService executor = Executors.newFixedThreadPool(2, runnable -> {
@@ -42,7 +42,7 @@ public final class YmirSourceReader {
 			for (int index = 0; index < 4096; index++) {
 				final int localX = index & 15;
 				final int localZ = index >> 4 & 15;
-				this.permutations[rotation.getQuarters()][index] = index & ~255 | (rotation.rotateZ(localX, localZ) & 15) << 4 | rotation.rotateX(localX, localZ) & 15;
+				this.sources[rotation.getQuarters()][index & ~255 | (rotation.rotateZ(localX, localZ) & 15) << 4 | rotation.rotateX(localX, localZ) & 15] = index;
 			}
 		}
 	}
@@ -72,7 +72,7 @@ public final class YmirSourceReader {
 
 	private YmirSourceChunk convert(final NBTTagCompound level, final YmirWorldSource source, final boolean sky) {
 		final YmirWorldRotation rotation = source.getRotation();
-		final int[] permutation = rotation == YmirWorldRotation.NONE ? null : this.permutations[rotation.getQuarters()];
+		final int[] sources = rotation == YmirWorldRotation.NONE ? null : this.sources[rotation.getQuarters()];
 		final int[] ids = YmirBlockIdRegistry.inst().getBlocks(source.getDirectory()).orElse(null);
 		final int[] flags = this.getBlockFlags();
 		final ExtendedBlockStorage[] storages = new ExtendedBlockStorage[16];
@@ -80,7 +80,7 @@ public final class YmirSourceReader {
 		for (int index = 0; index < sections.tagCount(); index++) {
 			final NBTTagCompound section = sections.getCompoundTagAt(index);
 			final int y = section.getByte("Y");
-			storages[y] = this.convert(section, y, sky, ids, flags, rotation, permutation);
+			storages[y] = this.convert(section, y, sky, ids, flags, rotation, sources);
 		}
 
 		final NBTTagList entities = level.getTagList("Entities", 10);
@@ -93,11 +93,11 @@ public final class YmirSourceReader {
 			this.transformTileEntity(tileEntities.getCompoundTagAt(index), source);
 		}
 
-		final byte[] biomes = level.hasKey("Biomes", 7) ? this.permute(level.getByteArray("Biomes"), permutation) : null;
+		final byte[] biomes = level.hasKey("Biomes", 7) ? this.permute(level.getByteArray("Biomes"), sources) : null;
 		return YmirSourceChunk.of(storages, biomes, entities, tileEntities);
 	}
 
-	private ExtendedBlockStorage convert(final NBTTagCompound section, final int y, final boolean sky, final int[] ids, final int[] flags, final YmirWorldRotation rotation, final int[] permutation) {
+	private ExtendedBlockStorage convert(final NBTTagCompound section, final int y, final boolean sky, final int[] ids, final int[] flags, final YmirWorldRotation rotation, final int[] sources) {
 		if (ids != null) {
 			YmirBlockIdRegistry.inst().convert(section, ids);
 		}
@@ -105,23 +105,38 @@ public final class YmirSourceReader {
 		final ExtendedBlockStorage storage = new ExtendedBlockStorage(y << 4, sky);
 		final byte[] blocks = section.getByteArray("Blocks");
 		final byte[] add = section.hasKey("Add", 7) ? section.getByteArray("Add") : null;
+		final byte[] data = section.getByteArray("Data");
+		final byte[] rotatedBlocks = sources == null ? blocks : new byte[blocks.length];
+		final byte[] rotatedData = sources == null ? data : new byte[data.length];
+		final byte[] rotatedAdd = sources == null || add == null ? add : new byte[add.length];
 		int blockRefs = 0;
 		int tickRefs = 0;
-		for (int index = 0; index < 4096; index++) {
-			final int id = blocks[index] & 255 | (add == null ? 0 : this.get(add, index) << 8);
-			blockRefs += flags[id] & 1;
-			tickRefs += flags[id] >> 1;
+		for (int index = 0; index < 4096; index += 2) {
+			final int first = sources == null ? index : sources[index];
+			final int second = sources == null ? index + 1 : sources[index + 1];
+			final int firstId = blocks[first] & 255 | (add == null ? 0 : this.get(add, first) << 8);
+			final int secondId = blocks[second] & 255 | (add == null ? 0 : this.get(add, second) << 8);
+			blockRefs += (flags[firstId] & 1) + (flags[secondId] & 1);
+			tickRefs += (flags[firstId] >> 1) + (flags[secondId] >> 1);
+			if (sources != null) {
+				rotatedBlocks[index] = blocks[first];
+				rotatedBlocks[index + 1] = blocks[second];
+				rotatedData[index >> 1] = (byte) (YmirBlockRotationRegistry.inst().rotate(firstId, this.get(data, first), rotation) | YmirBlockRotationRegistry.inst().rotate(secondId, this.get(data, second), rotation) << 4);
+				if (add != null) {
+					rotatedAdd[index >> 1] = (byte) (this.get(add, first) | this.get(add, second) << 4);
+				}
+			}
 		}
 
-		storage.setBlockMetadataArray(this.rotate(blocks, add, section.getByteArray("Data"), rotation, permutation));
-		storage.setBlocklightArray(this.permuteNibbles(section.getByteArray("BlockLight"), permutation));
-		storage.setBlockLSBArray(this.permute(blocks, permutation));
+		storage.setBlockMetadataArray(new NibbleArray(rotatedData, 4));
+		storage.setBlocklightArray(this.permuteNibbles(section.getByteArray("BlockLight"), sources));
+		storage.setBlockLSBArray(rotatedBlocks);
 		if (add != null) {
-			storage.setBlockMSBArray(this.permuteNibbles(add, permutation));
+			storage.setBlockMSBArray(new NibbleArray(rotatedAdd, 4));
 		}
 
 		if (sky && section.hasKey("SkyLight", 7)) {
-			storage.setSkylightArray(this.permuteNibbles(section.getByteArray("SkyLight"), permutation));
+			storage.setSkylightArray(this.permuteNibbles(section.getByteArray("SkyLight"), sources));
 		}
 
 		try {
@@ -145,49 +160,46 @@ public final class YmirSourceReader {
 		return this.blockFlags;
 	}
 
-	private NibbleArray rotate(final byte[] blocks, final byte[] add, final byte[] data, final YmirWorldRotation rotation, final int[] permutation) {
-		if (permutation == null) {
-			return new NibbleArray(data, 4);
-		}
-
-		final byte[] rotated = new byte[data.length];
-		for (int index = 0; index < 4096; index++) {
-			final int id = blocks[index] & 255 | (add == null ? 0 : this.get(add, index) << 8);
-			this.set(rotated, permutation[index], YmirBlockRotationRegistry.inst().rotate(id, this.get(data, index), rotation));
-		}
-		return new NibbleArray(rotated, 4);
-	}
-
-	private byte[] permute(final byte[] values, final int[] permutation) {
-		if (permutation == null) {
+	private byte[] permute(final byte[] values, final int[] sources) {
+		if (sources == null) {
 			return values;
 		}
 
 		final byte[] permuted = new byte[values.length];
 		for (int index = 0; index < values.length; index++) {
-			permuted[permutation[index]] = values[index];
+			permuted[index] = values[sources[index]];
 		}
 		return permuted;
 	}
 
-	private NibbleArray permuteNibbles(final byte[] values, final int[] permutation) {
-		if (permutation == null) {
+	private NibbleArray permuteNibbles(final byte[] values, final int[] sources) {
+		if (sources == null || this.isUniform(values)) {
 			return new NibbleArray(values, 4);
 		}
 
 		final byte[] permuted = new byte[values.length];
-		for (int index = 0; index < 4096; index++) {
-			this.set(permuted, permutation[index], this.get(values, index));
+		for (int index = 0; index < 4096; index += 2) {
+			permuted[index >> 1] = (byte) (this.get(values, sources[index]) | this.get(values, sources[index + 1]) << 4);
 		}
 		return new NibbleArray(permuted, 4);
 	}
 
-	private int get(final byte[] nibbles, final int index) {
-		return nibbles[index >> 1] >> ((index & 1) << 2) & 15;
+	private boolean isUniform(final byte[] nibbles) {
+		final byte first = nibbles.length == 2048 ? nibbles[0] : 0;
+		if (nibbles.length != 2048 || (first & 15) != (first >> 4 & 15)) {
+			return false;
+		}
+
+		for (int index = 1; index < nibbles.length; index++) {
+			if (nibbles[index] != first) {
+				return false;
+			}
+		}
+		return true;
 	}
 
-	private void set(final byte[] nibbles, final int index, final int value) {
-		nibbles[index >> 1] |= value << ((index & 1) << 2);
+	private int get(final byte[] nibbles, final int index) {
+		return nibbles[index >> 1] >> ((index & 1) << 2) & 15;
 	}
 
 	private void transformEntity(final NBTTagCompound tag, final YmirWorldSource source) {
