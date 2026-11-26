@@ -1,5 +1,7 @@
 package fr.paladium.ymir.internal.world.backend;
 
+import java.lang.reflect.Method;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -24,7 +26,10 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 
 	private static final BukkitYmirWorldBackend INSTANCE = new BukkitYmirWorldBackend();
 
+	private final Method spawnLocation = this.findSpawnLocation();
+
 	private boolean skylessWarned;
+	private boolean spawnAnglesWarned;
 
 	public static BukkitYmirWorldBackend inst() {
 		return BukkitYmirWorldBackend.INSTANCE;
@@ -85,6 +90,25 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 	}
 
 	@Override
+	public void setSpawn(final YmirWorld world, final int x, final int y, final int z, final float yaw, final float pitch) {
+		final World bukkitWorld = this.getBukkitWorld(world);
+		if (this.spawnLocation == null) {
+			if (!this.spawnAnglesWarned) {
+				this.spawnAnglesWarned = true;
+				System.err.println("[Ymir] The server does not support world spawn angles, Ymir world spawns keep their orientation.");
+			}
+			bukkitWorld.setSpawnLocation(x, y, z);
+			return;
+		}
+
+		try {
+			this.spawnLocation.invoke(bukkitWorld, new Location(bukkitWorld, x, y, z, yaw, pitch));
+		} catch (final ReflectiveOperationException e) {
+			System.err.println("[Ymir] Unable to set the spawn of the world " + world.getName() + ": " + e.getMessage());
+		}
+	}
+
+	@Override
 	public boolean teleport(final YmirWorld world, final EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {
 		final Player bukkitPlayer = Bukkit.getPlayer(player.getUniqueID());
 		if (bukkitPlayer == null) {
@@ -113,6 +137,14 @@ public final class BukkitYmirWorldBackend implements IYmirWorldBackend {
 		creator.seed(config.getSeed());
 		creator.type(type);
 		return creator;
+	}
+
+	private Method findSpawnLocation() {
+		try {
+			return World.class.getMethod("setSpawnLocation", Location.class);
+		} catch (final NoSuchMethodException e) {
+			return null;
+		}
 	}
 
 }

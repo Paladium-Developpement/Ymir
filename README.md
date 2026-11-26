@@ -49,7 +49,7 @@ final YmirWorld world = Ymir.create(YmirWorldConfig.create("arene")
 world.teleport(player);
 ```
 
-`create` construit le monde s'il n'existe pas et le charge sinon, avec la même configuration. Le monde se décharge seul après cinq minutes sans personne, et se recharge à la première téléportation. `teleport(player)` pose le joueur au spawn du monde, tourné vers l'orientation du spawn (`SpawnYaw` et `SpawnPitch` du level.dat sous Asgard, vers le sud sans Asgard).
+`create` construit le monde s'il n'existe pas et le charge sinon, avec la même configuration. Le monde se décharge seul après cinq minutes sans personne, et se recharge à la première téléportation. `teleport(player)` pose le joueur au spawn du monde, tourné vers l'orientation du spawn (`SpawnYaw` et `SpawnPitch` du level.dat sous Asgard, vers le sud sans Asgard). `setSpawn(x, y, z, yaw, pitch)` déplace le spawn d'un monde chargé avec son orientation (Asgard ≥ `d4996c1c`, sinon l'orientation est ignorée et un avertissement s'affiche une fois) ; `setSpawn(x, y, z)` garde l'orientation actuelle.
 
 ### Retrouver
 
