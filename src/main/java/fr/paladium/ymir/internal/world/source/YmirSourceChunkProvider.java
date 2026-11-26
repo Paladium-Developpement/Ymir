@@ -13,6 +13,7 @@ import fr.paladium.ymir.lib.YmirWorldSource;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
@@ -27,6 +28,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
+import net.minecraftforge.event.ForgeEventFactory;
 
 @RequiredArgsConstructor
 public class YmirSourceChunkProvider implements IChunkProvider {
@@ -189,7 +191,17 @@ public class YmirSourceChunkProvider implements IChunkProvider {
 
 		final int x = chunk.xPosition << 4;
 		final int z = chunk.zPosition << 4;
+		final int start = this.world.loadedEntityList.size();
 		SpawnerAnimals.performWorldGenSpawning(this.world, this.world.getBiomeGenForCoords(x + 8, z + 8), x, z, 16, 16, this.world.rand);
+
+		final int end = this.world.loadedEntityList.size();
+		for (int i = start; i < end; i++) {
+			final Object entity = this.world.loadedEntityList.get(i);
+			if (entity instanceof EntityLiving) {
+				final EntityLiving living = (EntityLiving) entity;
+				ForgeEventFactory.doSpecialSpawn(living, this.world, (float) living.posX, (float) living.posY, (float) living.posZ);
+			}
+		}
 	}
 
 	private Chunk empty(final int x, final int z) {
