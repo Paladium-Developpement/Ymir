@@ -269,6 +269,11 @@ public final class YmirWorld {
 		return this;
 	}
 
+	public @NonNull YmirWorld setSpawn(final int x, final int y, final int z, final float yaw, final float pitch) {
+		YmirWorldBackend.get().setSpawn(this.require(), x, y, z, yaw, pitch);
+		return this;
+	}
+
 	public @NonNull YmirWorld setGamerule(final @NonNull String key, final boolean value) {
 		return this.setGamerule(key, String.valueOf(value));
 	}

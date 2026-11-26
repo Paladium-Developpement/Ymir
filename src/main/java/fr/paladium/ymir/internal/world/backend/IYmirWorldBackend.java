@@ -18,6 +18,7 @@ public interface IYmirWorldBackend {
 	public float getSpawnYaw(final YmirWorld world);
 	public float getSpawnPitch(final YmirWorld world);
 	public void setSpawn(final YmirWorld world, final int x, final int y, final int z);
+	public void setSpawn(final YmirWorld world, final int x, final int y, final int z, final float yaw, final float pitch);
 	public boolean teleport(final YmirWorld world, final EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch);
 
 }

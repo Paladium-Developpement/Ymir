@@ -148,6 +148,11 @@ public final class ForgeYmirWorldBackend implements IYmirWorldBackend {
 	}
 
 	@Override
+	public void setSpawn(final YmirWorld world, final int x, final int y, final int z, final float yaw, final float pitch) {
+		world.getHandle().setSpawnLocation(x, y, z);
+	}
+
+	@Override
 	public boolean teleport(final YmirWorld world, final EntityPlayerMP player, final double x, final double y, final double z, final float yaw, final float pitch) {
 		if (player.ridingEntity != null) {
 			player.mountEntity(null);
