@@ -5,6 +5,7 @@ import cpw.mods.fml.common.event.FMLServerStartedEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import fr.paladium.ymir.internal.common.CommonProxy;
 import fr.paladium.ymir.internal.server.listener.YmirConnectionListener;
+import fr.paladium.ymir.internal.server.listener.YmirPlayerFileListener;
 import fr.paladium.ymir.internal.server.listener.YmirPlayerListener;
 import fr.paladium.ymir.internal.server.listener.YmirRandomTickListener;
 import fr.paladium.ymir.internal.server.listener.YmirSourceListener;
@@ -26,6 +27,7 @@ public class ServerProxy extends CommonProxy {
 		super.addListener(YmirSourceListener.class);
 		super.addListener(YmirConnectionListener.class);
 		super.addListener(YmirPlayerListener.class);
+		super.addListener(YmirPlayerFileListener.class);
 		super.addListener(YmirTickListener.class);
 		super.addListener(YmirRandomTickListener.class);
 	}
